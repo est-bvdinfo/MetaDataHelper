@@ -25,11 +25,11 @@ Set fso = CreateObject("Scripting.FileSystemObject")
 
 
     sFilename = "LOGS[" & Year(Now) & Month(Now) & Day(Now) & "].log"
-    fsoCreateFolder "Logs", Settings.VbaProjectsFolder
-          If Not fso.FileExists(Settings.VbaProjectsFolder & "Logs\" & sFilename) Then
-            fso.CreateTextFile (Settings.VbaProjectsFolder & "Logs\" & sFilename)
+    fsoCreateFolder "Logs", Settings.UserSystemFolder
+          If Not fso.FileExists(Settings.UserSystemFolder & "Logs\" & sFilename) Then
+            fso.CreateTextFile (Settings.UserSystemFolder & "Logs\" & sFilename)
           End If
-    Set LogFile = fso.OpenTextFile(Settings.VbaProjectsFolder & "Logs\" & sFilename, 8, True)
+    Set LogFile = fso.OpenTextFile(Settings.UserSystemFolder & "Logs\" & sFilename, 8, True)
         LogFile.WriteLine ("[" & UCase(Settings.userName) & "@ " & Now & strItem)
         LogFile.Close
         Debug.Print "@" & Now & ":" & strItem

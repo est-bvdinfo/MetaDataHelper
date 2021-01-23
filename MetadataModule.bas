@@ -66,6 +66,7 @@ End Sub
 Private Sub DeleteSheets()
 
 Application.DisplayAlerts = False
+Dim ws
 For Each ws In ThisWorkbook.Worksheets
     ws.Delete
 Next

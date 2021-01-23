@@ -131,10 +131,10 @@ Public Function Round_Up(ByVal d As Double) As Integer
         Round_Up = result + 1
     End If
 End Function
-Function HasKey(col As Collection, key As String) As Boolean
+Function HasKey(col As Collection, Key As String) As Boolean
     Dim v As Variant
   On Error Resume Next
-    v = IsObject(col.Item(key))
+    v = IsObject(col.Item(Key))
     HasKey = Not IsEmpty(v)
 End Function
 

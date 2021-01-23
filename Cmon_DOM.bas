@@ -68,7 +68,7 @@ Dim fsfol
 Set fsfol = CreateObject("Scripting.FileSystemObject")
 'check if it ends with a backslash
 If Trim(Right(ParentFol, 1)) <> "\" Then ParentFol = ParentFol & "\"
-If Not fsfol.FolderExists(ParentFol & fol) Then
+If Not fsoFolderExists(ParentFol & fol) Then
     fsfol.CreateFolder (ParentFol & fol)
     LogItem "[fsoCreateFolder] SubFolder " & fol & " from " & ParentFol & " has been created! "
 End If
@@ -90,18 +90,32 @@ If Err.Number = 70 Then
 End If
 Set fso = Nothing
 End Sub
+Public Function fsoFolderExists(ByVal sFolder) As Boolean
 
-Public Sub fsoWriteFile(ByVal Content, ByVal filename, ByVal sExtention, ByVal sfolder)
+Dim fsfol
+Set fsfol = CreateObject("Scripting.FileSystemObject")
+fsoFolderExists = True
+
+If Not fsfol.FolderExists(sFolder) Then
+    Debug.Print "[fsoFolderExists]" & sFolder & " does not exists !"
+    fsoFolderExists = False
+End If
+
+Set fsfol = Nothing
+
+End Function
+
+Public Sub fsoWriteFile(ByVal Content, ByVal filename, ByVal sExtention, ByVal sFolder)
 Dim oStreamRecoder
 Dim fso
 
-    DebugLine "[fsoWriteFile]" & filename & "." & sExtention & "  in folder '" & sfolder & "' about to be created"
+    DebugLine "[fsoWriteFile]" & filename & "." & sExtention & "  in folder '" & sFolder & "' about to be created"
 Set fso = CreateObject("Scripting.FileSystemObject")
-Set oStreamRecoder = fso.CreateTextFile(sfolder & filename & "." & sExtention, True, False)
+Set oStreamRecoder = fso.CreateTextFile(sFolder & filename & "." & sExtention, True, False)
     DebugLine "[fsoWriteFile] type of content object" & TypeName(Content)
     
     If TypeName(Content) <> "Null" Then oStreamRecoder.Write (Content)
-         LogItem filename & "." & sExtention & " created in folder '" & sfolder & "'"
+         LogItem filename & "." & sExtention & " created in folder '" & sFolder & "'"
     Set oStreamRecoder = Nothing
     Set fso = Nothing
  
@@ -131,16 +145,16 @@ outputPath = Settings.UserSystemFolder & "CmdOuput.dat"
    End If
 End Function
 
-Public Sub fsoOpenExplorer(ByVal SPath)
+Public Sub fsoOpenExplorer(ByVal sPath)
 Dim fsfol
 Dim SH, txtFolderToOpen
 Set SH = CreateObject("Shell.Application")
 Set fsfol = CreateObject("Scripting.FileSystemObject")
-If Not fsfol.FolderExists(SPath) Then
-    LogItem "Folder [" & SPath & "] doesn't exist"
+If Not fsfol.FolderExists(sPath) Then
+    LogItem "Folder [" & sPath & "] doesn't exist"
 Else
-    LogItem "[fsoOpenExplorer   ] " & SPath
-    SH.Explore SPath
+    LogItem "[fsoOpenExplorer   ] " & sPath
+    SH.Explore sPath
 End If
 Set SH = Nothing
 Set fsfol = Nothing

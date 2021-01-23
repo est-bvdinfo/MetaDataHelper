@@ -71,3 +71,14 @@ End Function
 Function HttpPOSTXto(url As String, ByVal arguments)
     HttpPOSTXto = HttpRequest(url, "OAuthNeeded", REST, arguments)
 End Function
+
+'VBA function to READ from the Windows Registry:
+
+Public Function RegRead(Key As String) As String
+    On Error Resume Next
+    With CreateObject("wscript.shell")
+        RegRead = .RegRead(Key)
+    End With
+    If Err Then Err.Clear
+    On Error GoTo 0
+End Function

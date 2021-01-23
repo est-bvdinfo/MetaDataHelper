@@ -24,10 +24,7 @@ Call Init
 
 End Sub
 
-Public Property Get VbaProjectsFolder()
-   Call Init
-   VbaProjectsFolder = m_vbaprojectsFolder
-End Property
+
 Public Property Get CurrentProjectFolder()
    Call Init
    CurrentProjectFolder = m_currentProjectFolder
@@ -78,25 +75,31 @@ If m_isInitialized Then Exit Sub
 Dim WshShell As Object
 Dim WshNetwork As Object
 Dim fso As Object
+Dim vbaProjectsFolder As String
     
       
 Set WshShell = CreateObject("WScript.Shell")
 Set WshNetwork = CreateObject("WScript.Network")
 Set fso = CreateObject("scripting.filesystemobject")
     
-    DebugLine "Multiple folder creations"
-    'generic folder
-     m_vbaprojectsFolder = fsoCreateFolder("VBAProjectFiles", WshShell.SpecialFolders("MyDocuments"))
-
-    'specific project
-    m_currentProjectFolder = fsoCreateFolder(UCase(Replace(MODULE_NAME, " ", "_")), m_vbaprojectsFolder)
-    
-    'create user settings in  appdata if not created yet
-    m_usersysFolder = fsoCreateFolder(MODULE_NAME, WshShell.ExpandEnvironmentStrings("%APPDATA%"))
-    
     'identify user and computer
     m_userName = UCase(WshNetwork.userName)
     m_computerName = UCase(WshNetwork.ComputerName)
+    
+    DebugLine "Multiple folder creations"
+        
+    'create user settings in  appdata if not created yet
+    m_usersysFolder = fsoCreateFolder(MODULE_AUDIENCE, WshShell.ExpandEnvironmentStrings("%APPDATA%"))
+    
+    'generic folder
+
+    vbaProjectsFolder = GetProjectDevFolder(m_usersysFolder)
+
+    'specific project
+    m_currentProjectFolder = fsoCreateFolder(UCase(Replace(MODULE_NAME, " ", "_")), vbaProjectsFolder)
+
+    
+
     
 Set WshNetwork = Nothing
 Set WshShell = Nothing
@@ -178,5 +181,6 @@ Set xmlDoc = Nothing
 
 
 End Sub
+
 
 

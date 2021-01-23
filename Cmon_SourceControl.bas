@@ -401,7 +401,7 @@ If Settings Is Nothing Then Set Settings = New CmonSettings
 Dim fsfol: Set fsfol = CreateObject("Scripting.FileSystemObject")
 
 'check if the .hg repository exists'
-If fsfol.FolderExists(Settings.CurrentProjectFolder & ".hg") Then
+If fsfol.FileExists(Settings.CurrentProjectFolder & ".gitignore") Then
  'Export all the modules to the root folder
    Call ExportModules(False)
  
@@ -459,3 +459,67 @@ Else
     MsgBox "Commit failed. Your computer is not linked to a mercurial repository. ", 64, "Commit to BitBucket failed"
 End If
 End Sub
+
+Public Function GetProjectDevFolder(userFolder As String) As String
+
+Dim xmlDoc, bookmarks, bookMarkNode
+Dim fso, ts, WshShell, sPath, sProject
+Dim xmlString, defaultDevFolders As String
+Dim sourceTreeBookMarkFile, sourceTreeAppDataFolder As String
+
+Set fso = CreateObject("Scripting.FileSystemObject")
+Set WshShell = CreateObject("WScript.Shell")
+
+'initialised required files
+sourceTreeAppDataFolder = WshShell.ExpandEnvironmentStrings("%userprofile%") & "\AppData\Local\Atlassian\SourceTree"
+sourceTreeBookMarkFile = sourceTreeAppDataFolder & "\bookmarks.xml"
+
+GetProjectDevFolder = userFolder
+
+'check whether Altassian sourcetree is installed
+If fsoFolderExists(sourceTreeAppDataFolder) Then
+   
+   'if found then parse sourcetree bookmark to find the developpment path
+    ' get the bookmark file
+    
+    If fso.FileExists(sourceTreeBookMarkFile) Then
+      Set xmlDoc = CreateObject("Msxml2.DOMDocument")
+      Set ts = fso.OpenTextFile(sourceTreeBookMarkFile, 1)
+      xmlString = ts.ReadALL
+      xmlDoc.async = "false"
+      xmlDoc.LoadXML xmlString
+      DebugLine "[GetProjectDevFolder] upload bookmark"
+      
+      'check that the settings are valid
+      If IsXMLValid(xmlString, USERSETTINGS) = False Then Exit Function
+       
+       'parse bookmarks
+       For Each bookMarkNode In xmlDoc.SelectNodes("/ArrayOfTreeViewNode/TreeViewNode")
+            sProject = bookMarkNode.SelectSingleNode("Name").text
+            sPath = bookMarkNode.SelectSingleNode("Path").text
+            DebugLine "[" & sProject & "] = [" & sPath & "]"
+            
+            'escape when found
+            If UCase(Trim(sProject)) = UCase(Trim(MODULE_NAME)) Then
+                GetProjectDevFolder = Left(sPath, InStrRev(sPath, "\"))
+                LogItem "[GetProjectDevFolder] path dev found " & GetProjectDevFolder
+                Exit For
+            End If
+                 
+       Next bookMarkNode
+    
+    Else
+        DebugLine "[GetProjectDevFolder]  can't find bookmark file"
+        
+    End If
+    
+End If
+
+xmlString = ""
+Set ts = Nothing
+Set WshShell = Nothing
+Set xmlDoc = Nothing
+Set bookmarks = Nothing
+Set bookMarkNode = Nothing
+
+End Function

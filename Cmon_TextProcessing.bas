@@ -180,5 +180,10 @@ OutOfHere2:
   End If
 
 End Function
-
+Function cleanString(str As String) As String
+    Dim ch, bytes() As Byte: bytes = str
+    For Each ch In bytes
+        If Chr(ch) Like "[A-Z.a-z 0-9]" Then cleanString = cleanString & Chr(ch)
+    Next ch
+End Function
 

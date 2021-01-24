@@ -416,7 +416,7 @@ If fsfol.FileExists(Settings.CurrentProjectFolder & ".gitignore") Then
         
       'get current branch
        ShellRun "Git.exe branch --show-current", branchName, Settings.CurrentProjectFolder
-       branchName = Trim(branchName)
+       branchName = cleanString(branchName)
        
        'stage changesets'
        ShellRun "Git.exe add .", Settings.CurrentProjectFolder
@@ -438,7 +438,6 @@ If fsfol.FileExists(Settings.CurrentProjectFolder & ".gitignore") Then
             LogItem "[ComitToGIT] Commit " & MODULE_VERSION & " performed. Displayed in SourceTree as " & commitComment
             
             stringToExecute = "Git.exe push origin " & rgAddDblQuote(branchName)
-            
             'ask is publish is required
             If MsgBox("Publish last commit on BitBucket?" & vbCrLf & commitFeedback, 1, "Push on SourceControl") = 1 Then
                 retBack = ShellRun(stringToExecute, pushFeedback, Settings.CurrentProjectFolder)

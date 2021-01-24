@@ -437,9 +437,11 @@ If fsfol.FileExists(Settings.CurrentProjectFolder & ".gitignore") Then
         ElseIf retBack = 0 Then
             LogItem "[ComitToGIT] Commit " & MODULE_VERSION & " performed. Displayed in SourceTree as " & commitComment
             
+            stringToExecute = "Git.exe push origin " & rgAddDblQuote(branchName)
+            
             'ask is publish is required
             If MsgBox("Publish last commit on BitBucket?" & vbCrLf & commitFeedback, 1, "Push on SourceControl") = 1 Then
-                retBack = ShellRun("Git.exe push origin " & rgAddDblQuote(branchName), pushFeedback, Settings.CurrentProjectFolder)
+                retBack = ShellRun(stringToExecute, pushFeedback, Settings.CurrentProjectFolder)
                 
               'execute the publish action'
                 'check they are no error on shell level'

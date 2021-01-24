@@ -391,11 +391,11 @@ Else
 End If
 
 End Function
-Public Sub CommitToHGMercurial()
-Dim commitComment
-Dim retBack
-Dim stringToExecute
+Public Sub CommitToGIT()
 
+Dim stringToExecute, retBack, branchName As String
+Dim commitFeedback As String
+Dim commitComment, pushFeedback As String
 
 If Settings Is Nothing Then Set Settings = New CmonSettings
 Dim fsfol: Set fsfol = CreateObject("Scripting.FileSystemObject")
@@ -411,43 +411,44 @@ If fsfol.FileExists(Settings.CurrentProjectFolder & ".gitignore") Then
     Else
         commitComment = InputBox("Do you want to commit current version " & vbCrLf & "Please add a comment!", "Commit version " & MODULE_VERSION, MODULE_VERSION & ":")
     End If
- Dim WshShell: Set WshShell = CreateObject("WScript.Shell")
+ 
   If (Len(commitComment) > 3) Then
+        
+      'get current branch
+       ShellRun "Git.exe branch --show-current", branchName, Settings.CurrentProjectFolder
+       
+       'stage changesets'
+       ShellRun "Git.exe add .", Settings.CurrentProjectFolder
        
       'execute the commit action'
-       stringToExecute = rgExCreateCommand(" hg.exe -v commit -R " & rgAddQuote(rgRemoveSlash(Settings.CurrentProjectFolder)) & " -m " & rgAddQuote(commitComment))
-       DebugLine stringToExecute
-     
-      'retBack = Shell(stringToExecute, vbNormalFocus)
-       retBack = WshShell.Run(stringToExecute, 0, True)
+       'stringToExecute = rgExCreateCommand(" hg.exe -v commit -R " & rgAddQuote(rgRemoveSlash(Settings.CurrentProjectFolder)) & " -m " & rgAddQuote(commitComment))
+        retBack = ShellRun("Git.exe commit -m " & rgAddDblQuote(commitComment), commitFeedback, Settings.CurrentProjectFolder)
        
        'check they are no error on shell level'
         If retBack = 1 Then 'success
-             MsgBox "No push required!" & fsoReadToLog, 1, "Push on SourceControl"
-             LogItem "[ComitToHGMercurial] No push required. Code :" & retBack
+             MsgBox "No push required!", 1, "Push on SourceControl"
+             LogItem "[ComitToGIT] No push required. Code :" & retBack
              
         ElseIf (retBack > 1) Then 'failed
             LogItem "ComitToHGMercurial No commit performed.  Error in the shell execution. CODE(" & retBack & ")"
             MsgBox "Commit to Repository failed", 64, "Commit failed. Error in the shell execution. CODE(" & retBack & ")"
             
         ElseIf retBack = 0 Then
-            LogItem "[ComitToHGMercurial] Commit " & MODULE_VERSION & " performed. Displayed in TortoiseHg as " & commitComment
+            LogItem "[ComitToGIT] Commit " & MODULE_VERSION & " performed. Displayed in SourceTree as " & commitComment
             
             'ask is publish is required
-            If MsgBox("Publish last commit on BitBucket?" & fsoReadToLog, 1, "Push on SourceControl") = 1 Then
-                stringToExecute = rgExCreateCommand(" hg.exe -R " & rgAddQuote(rgRemoveSlash(Settings.CurrentProjectFolder)) & " push")
-                DebugLine stringToExecute
-              
+            If MsgBox("Publish last commit on BitBucket?" & vbCrLf & commitFeedback, 1, "Push on SourceControl") = 1 Then
+                retBack = ShellRun("Git.exe push origin " & rgAddDblQuote(branchName), pushFeedback, Settings.CurrentProjectFolder)
+                
               'execute the publish action'
-              retBack = WshShell.Run(stringToExecute, 0, True)
-              'check they are no error on shell level'
+                'check they are no error on shell level'
 
                   If retBack <> 0 Then
-                      LogItem "[ComitToHGMercurial] Push Failed.  Error in the shell execution. CODE(" & retBack & ")"
+                      LogItem "[ComitToGIT] Push Failed.  Error in the shell execution. CODE(" & retBack & ")"
                       MsgBox "Push to BitBucket failed", 64, "Push failed. Error in the shell execution. CODE(" & retBack & ")"
                   Else
-                     MsgBox "Push to SourceControl succeeded" & vbCrLf & fsoReadToLog, 1, "Push on SourceControl"
-                     LogItem "[ComitToHGMercurial] Push to SourceControl succeeded  Code :" & retBack
+                     MsgBox "Push to SourceControl succeeded" & vbCrLf & pushFeedback, 1, "Push on SourceControl"
+                     LogItem "[ComitToGIT] Push to SourceControl succeeded  Code :" & retBack
                 
                   End If
             End If
@@ -455,7 +456,7 @@ If fsfol.FileExists(Settings.CurrentProjectFolder & ".gitignore") Then
   End If
 Else
 
-    LogItem "[ComitToHGMercurial] No commit performed. Unable to find .hg repository in " & Settings.CurrentProjectFolder & ".hg"
+    LogItem "[ComitToGIT] No commit performed. Unable to find .hg repository in " & Settings.CurrentProjectFolder & ".hg"
     MsgBox "Commit failed. Your computer is not linked to a mercurial repository. ", 64, "Commit to BitBucket failed"
 End If
 End Sub

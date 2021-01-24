@@ -97,7 +97,7 @@ outputPath = Settings.UserSystemFolder & "CmdOuput.dat"
 'remove the previous version
 fsoDeleteFile outputPath
 'build the command
-rgExCreateCommand = VBA.Environ$("COMSPEC") & " /C" & command & " > " & outputPath
+rgExCreateCommand = VBA.Environ$("COMSPEC") & " /C " & command & " > " & outputPath
 
 End Function
 '_________________________________________________'

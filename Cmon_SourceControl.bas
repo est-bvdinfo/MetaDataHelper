@@ -416,6 +416,7 @@ If fsfol.FileExists(Settings.CurrentProjectFolder & ".gitignore") Then
         
       'get current branch
        ShellRun "Git.exe branch --show-current", branchName, Settings.CurrentProjectFolder
+       branchName = Trim(branchName)
        
        'stage changesets'
        ShellRun "Git.exe add .", Settings.CurrentProjectFolder

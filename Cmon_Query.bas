@@ -99,7 +99,7 @@ Public Function ShellRun(ByVal sCmd As String, ByRef sOutput As String, Optional
     
     Set oOutput = oExec.StdOut
     Set oErrors = oExec.StdErr
-    DebugLine "[ShellRun] " & sCmd
+    DebugLine "[ShellRun] exit code" & ShellRun & "for query: " & sCmd
     'handle the results as they are written to and read from the StdOut object
     Dim s As String
     Dim sLine As String

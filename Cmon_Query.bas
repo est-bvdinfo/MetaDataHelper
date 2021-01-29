@@ -16,8 +16,6 @@ Private Declare Function ShellExecute _
                             ByVal nShowCmd As Long) _
                             As Long
                             
-
-
 Public Sub HttpOpenLink(strUrl As String)
 On Error GoTo wellsrLaunchError
     Dim R As Long
@@ -46,20 +44,25 @@ Function HttpRequest(url As String, sType As String, RequestType As RequestType,
   Else
      http.setRequestHeader "Content-Type", "text/xml"
   End If
-  http.Send arguments
+  http.send arguments
   
   If Err.Number <> 0 Then
     LogItem "[HttpGET] " & " unable to reach " & url
     LogItem "[HttpGET] (" & Err.Number & ") :" & Err.Description
   Err.Clear
   End If
+
   HttpRequest = http.responseText
+  
  Set http = Nothing
 
  End Function
-Function HttpGET(url As String)
-
+Function HttpGETRest(url As String)
     HttpGET = HttpRequest(url, "GET", REST)
+    
+End Function
+Function HttpGET(url As String)
+    HttpGET = HttpRequest(url, "GET", NoAuth)
     
 End Function
 Function HttpPOST(url As String, ByVal arguments)
@@ -99,7 +102,7 @@ Public Function ShellRun(ByVal sCmd As String, ByRef sOutput As String, Optional
     
     Set oOutput = oExec.StdOut
     Set oErrors = oExec.StdErr
-    DebugLine "[ShellRun] exit code" & ShellRun & "for query: " & sCmd
+    DebugLine "[ShellRun] exit code: (" & ShellRun & ") for command: " & sCmd
     'handle the results as they are written to and read from the StdOut object
     Dim s As String
     Dim sLine As String

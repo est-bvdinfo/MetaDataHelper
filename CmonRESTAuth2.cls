@@ -159,7 +159,7 @@ Private Sub GetNewToken()
     With objXMLRequest
         .Open "POST", strTokenUrl, False
         .setRequestHeader "Content-Type", "application/x-www-form-urlencoded"
-        .Send CreateTokenRequest()
+        .send CreateTokenRequest()
 
         If .Status <> 200 Then
             '// Error getting OAuth2 token
@@ -188,7 +188,7 @@ Private Sub RefreshToken()
     With objXMLRequest
         .Open "POST", strTokenUrl, False
         .setRequestHeader "Content-Type", "application/x-www-form-urlencoded"
-        .Send CreateRefreshRequest()
+        .send CreateRefreshRequest()
         If .Status <> 200 Then
             '// Error getting OAuth2 token
             Err.Raise vbObjectError + .Status, _

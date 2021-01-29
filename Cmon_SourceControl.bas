@@ -2,6 +2,7 @@ Attribute VB_Name = "Cmon_SourceControl"
 Option Explicit
 Public UpdatesHasBeenChecked As Boolean
 Public ToUpGradeVersion As String
+Public IsSourceTreeInstalled As Boolean
 Public Enum updateStatuses
     Uptodate
     ToUpdate
@@ -240,7 +241,7 @@ Public Sub UpdateInstaller()
 End If
  
 
- downloadLink = REPOSITORY & "/get/default.zip"
+ downloadLink = REPOSITORY & "get/master.zip"
  zipFileName = "Update" & ToUpGradeVersion & ".zip"
  currentUpdateFolder = fsoCreateFolder("Updates", Settings.UserSystemFolder)
 
@@ -250,7 +251,7 @@ End If
   Set http = CreateObject("Microsoft.XMLHTTP")
   Set fso = CreateObject("Scripting.FileSystemObject")
   http.Open "GET", downloadLink, False
-  http.Send
+  http.send
   'in case of download error stop the download
   If Err.Number <> 0 Then
     LogItem "[UpdateDownloadAndExtract] " & " unable to reach " & downloadLink
@@ -315,81 +316,89 @@ End If
 End Sub
 
 Private Function CheckNewChangeset() As updateStatuses
-Dim responseText
-Dim xmlDoc
-Dim oChannel
-Dim oProperties
-Dim oProperty
+
+Dim html As New HTMLDocument
+Dim http As New XMLHTTP60
+Dim posts As MSHTML.IHTMLElementCollection
+Dim post As MSHTML.IHTMLElement
+
 Dim currentTitle
+Dim currentLine
 Dim externVersions
 Dim externVersion
 Dim internVersion
-Dim separator
+Dim separatorPos
 Dim versionLine
 Dim SH
 
 CheckNewChangeset = Uptodate
 ToUpGradeVersion = MODULE_VERSION
 
-responseText = HttpGET(REPOSITORY_RSS)
-Set xmlDoc = CreateObject("Msxml2.DOMDocument")
-xmlDoc.async = "false"
-xmlDoc.LoadXML responseText
-
-If xmlDoc.parseError.ErrorCode = 0 Then
-  Set oChannel = xmlDoc.SelectSingleNode("/rss/channel")
-    If Not (oChannel Is Nothing) Then
-    Set oProperties = oChannel.ChildNodes
-        For Each oProperty In oProperties
-            If (oProperty.nodeName = "item") Then
-                currentTitle = oProperty.FirstChild.text
-                separator = InStr(currentTitle, ":")
-                DebugLine currentTitle & " : " & separator
-                If (separator > 0) Then
-                    versionLine = Trim(Left(currentTitle, separator - 1))
-                    'if finishes with a exclamation mark then skip because not a publishabe version
-                    If Right(versionLine, 1) <> "!" Then
-                        externVersions = Split(versionLine, ".")
-                        'check if does the correct version formating or skip the formating
-                        If UBound(externVersions) >= 2 Then
-                            'create a comparable version
-                            On Error Resume Next
-                            externVersion = CInt(externVersions(0)) * 1000 + CInt(externVersions(1)) * 100 + CInt(externVersions(2))
-                            'find the internal version
-                            Dim internVersions: internVersions = Split(MODULE_VERSION, ".")
-                            internVersion = CInt(internVersions(0)) * 1000 + CInt(internVersions(1)) * 100 + CInt(internVersions(2))
-                            DebugLine "RSS Version:" & externVersion & " intern version " & internVersion
-                            'check if both are numeric then proceed to check
-                            If (IsNumeric(externVersion) And IsNumeric(internVersion)) Then
-                                If (externVersion > internVersion) Then
-                                    CheckNewChangeset = ToUpdate
-                                    ToUpGradeVersion = Trim(versionLine)
-                                Else
-                                    LogItem "[CheckNewChangeset] your current version " & MODULE_VERSION & " is up to date"
-                                End If
-                                Exit For
-                            End If
-                        'non incremented update (merge or forking)
-                        End If
-                    Else
-                        DebugLine "Version: " & versionLine & " .Publish made in debug mode, not taken into account"
-                    
-                    End If
-                End If
-            End If
-        'not an item node
-        Next
-            'Continue the loop
-    Else
-        LogItem "[CheckNewChangeset] /rss/channel not found"
-        CheckNewChangeset = RssNotReached
-    End If
-Else
-    LogItem "[CheckNewChangeset] RSS Feed seems not to be accessible anymore!!!"
-    CheckNewChangeset = RssNotReached
+'fetch the page manually as headerRequests of HTTPGet are scrambling the BitBucket
+With http
+    .Open "GET", REPOSITORY & "wiki/Home", False
+    .send
     
-End If
+    If DEBUGMODE = "ON" Then
+        fsoWriteFile .responseText, "wiki", "html", Settings.UserSystemFolder
+    End If
+    
+    'populate html doc from response Text
+    html.body.innerHTML = .responseText
+    
+End With
 
+'empty http object
+Set http = Nothing
+
+Set posts = html.getElementsByTagName("li")
+
+If InStr(html.body.innerHTML, MODULE_NAME) > 0 Then
+For Each post In posts
+    currentTitle = post.innerText
+    separatorPos = InStr(currentTitle, ":")
+        DebugLine currentTitle & " : " & separatorPos
+        
+          'skip the line if other html markup and there is not semicolon
+        If (separatorPos > 0 And InStr(currentTitle, "<") = 0) Then
+            versionLine = Trim(Left(currentTitle, separatorPos - 1))
+            
+            'if finishes with a exclamation mark then skip because not a publishabe version
+            If Right(versionLine, 1) <> "!" Then
+                externVersions = Split(versionLine, ".")
+                'check if does the correct version formating or skip the formating
+                If UBound(externVersions) >= 2 Then
+                    'create a comparable version
+                    On Error Resume Next
+                    externVersion = CInt(externVersions(0)) * 1000 + CInt(externVersions(1)) * 100 + CInt(externVersions(2))
+                    'find the internal version
+                    Dim internVersions: internVersions = Split(MODULE_VERSION, ".")
+                    internVersion = CInt(internVersions(0)) * 1000 + CInt(internVersions(1)) * 100 + CInt(internVersions(2))
+                    DebugLine "[CheckNewChangeset]: " & externVersion & " intern version " & internVersion
+                    'check if both are numeric then proceed to check
+                    If (IsNumeric(externVersion) And IsNumeric(internVersion)) Then
+                        If (externVersion > internVersion) Then
+                            CheckNewChangeset = ToUpdate
+                            ToUpGradeVersion = Trim(versionLine)
+                            Exit For
+                        Else
+                            LogItem "[CheckNewChangeset] your current version " & MODULE_VERSION & " is up to date"
+                        End If
+    
+                    End If
+                'non incremented update (merge or forking)
+                End If
+            Else
+                DebugLine "Version: " & versionLine & " .Publish made in debug mode, not taken into account"
+            
+            End If
+            ' no content to screen
+        End If
+    Next post
+    Else
+    LogItem "[CheckNewChangeset] /rss/channel not found"
+     CheckNewChangeset = RssNotReached
+End If
 End Function
 Public Sub CommitToGIT()
 
@@ -401,7 +410,8 @@ If Settings Is Nothing Then Set Settings = New CmonSettings
 Dim fsfol: Set fsfol = CreateObject("Scripting.FileSystemObject")
 
 'check if the .hg repository exists'
-If fsfol.FileExists(Settings.CurrentProjectFolder & ".gitignore") Then
+
+If IsSourceTreeInstalled Then
  'Export all the modules to the root folder
    Call ExportModules(False)
  
@@ -425,34 +435,39 @@ If fsfol.FileExists(Settings.CurrentProjectFolder & ".gitignore") Then
        'stringToExecute = rgExCreateCommand(" hg.exe -v commit -R " & rgAddQuote(rgRemoveSlash(Settings.CurrentProjectFolder)) & " -m " & rgAddQuote(commitComment))
         retBack = ShellRun("Git.exe commit -m " & rgAddDblQuote(commitComment), commitFeedback, Settings.CurrentProjectFolder)
        
-       'check they are no error on shell level'
-        If retBack = 1 Then 'success
-             MsgBox "No push required!", 1, "Push on SourceControl"
-             LogItem "[ComitToGIT] No push required. Code :" & retBack
+       'check they are no error on shell level²'
              
-        ElseIf (retBack > 1) Then 'failed
+         If (retBack <> 0) Then 'failed
             LogItem "ComitToHGMercurial No commit performed.  Error in the shell execution. CODE(" & retBack & ")"
             MsgBox "Commit to Repository failed", 64, "Commit failed. Error in the shell execution. CODE(" & retBack & ")"
             
-        ElseIf retBack = 0 Then
-            LogItem "[ComitToGIT] Commit " & MODULE_VERSION & " performed. Displayed in SourceTree as " & commitComment
+         Else
+            ' confirm whether commit is actually required
+            If InStr(commitFeedback, "Your branch is up to date") > 0 Then
+                MsgBox commitFeedback, 1, "No commit required"
+                LogItem "[ComitToGIT] No commit required." & vbCrLf & commitFeedback
             
-            stringToExecute = "Git.exe push origin " & rgAddDblQuote(branchName)
-            'ask is publish is required
-            If MsgBox("Publish last commit on BitBucket?" & vbCrLf & commitFeedback, 1, "Push on SourceControl") = 1 Then
-                retBack = ShellRun(stringToExecute, pushFeedback, Settings.CurrentProjectFolder)
+            Else
+                'ask whether publish is required
+                LogItem "[ComitToGIT] Commit " & MODULE_VERSION & " performed. Displayed in SourceTree as " & commitComment
+            
+                stringToExecute = "Git.exe push origin " & rgAddDblQuote(branchName)
+         
+                If MsgBox("Publish last commit on BitBucket?" & vbCrLf & commitFeedback, 1, "Push to SourceControl") = 1 Then
+                    retBack = ShellRun(stringToExecute, pushFeedback, Settings.CurrentProjectFolder)
                 
-              'execute the publish action'
-                'check they are no error on shell level'
+                    'execute the publish action'
+                    'check they are no error on shell level'
 
                   If retBack <> 0 Then
-                      LogItem "[ComitToGIT] Push Failed.  Error in the shell execution. CODE(" & retBack & ")"
-                      MsgBox "Push to BitBucket failed", 64, "Push failed. Error in the shell execution. CODE(" & retBack & ")"
+                      LogItem "[ComitToGIT] Push Failed. Error in the shell execution. CODE(" & retBack & ")" & vbCrLf & pushFeedback
+                      MsgBox "Push to Bitbucked failed. Error in the shell execution. CODE(" & retBack & ")" & vbCrLf & pushFeedback, 64, "Push to SourceControl"
                   Else
                      MsgBox "Push to SourceControl succeeded" & vbCrLf & pushFeedback, 1, "Push on SourceControl"
                      LogItem "[ComitToGIT] Push to SourceControl succeeded  Code :" & retBack
                 
                   End If
+                End If
             End If
       End If
   End If
@@ -505,12 +520,14 @@ If fsoFolderExists(sourceTreeAppDataFolder) Then
             'escape when found
             If UCase(Trim(sProject)) = UCase(Trim(MODULE_NAME)) Then
                 GetProjectDevFolder = Left(sPath, InStrRev(sPath, "\"))
+                'activate the IsUnderSourceTree boolean for commits
+                    IsSourceTreeInstalled = True
                 LogItem "[GetProjectDevFolder] path dev found " & GetProjectDevFolder
                 Exit For
             End If
                  
        Next bookMarkNode
-    
+       
     Else
         DebugLine "[GetProjectDevFolder]  can't find bookmark file"
         

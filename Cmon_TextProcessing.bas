@@ -30,15 +30,15 @@ Const GHND = &H42
 Const CF_TEXT = 1
 Const MAXSIZE = 4096
 
-Public Function fsoFindValueIntoString(ByVal text, ByVal startText, ByVal stopText)
-Dim startPos: startPos = InStr(text, startText)
+Public Function fsoFindValueIntoString(ByVal paragraph, ByVal startText, ByVal stopText)
+Dim startPos: startPos = InStr(paragraph, startText)
 Dim endPos
 If startPos > 0 Then
 startPos = startPos + Len(startText)
-    endPos = InStr(startPos, text, stopText)
+    endPos = InStr(startPos, paragraph, stopText)
     DebugLine "startPos: " & startPos & " endPos :" & endPos
     If endPos > 0 Then
-        fsoFindValueIntoString = Mid(text, startPos, endPos - startPos)
+        fsoFindValueIntoString = Mid(paragraph, startPos, endPos - startPos)
     End If
 End If
 

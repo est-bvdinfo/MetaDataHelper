@@ -136,7 +136,7 @@ Private Sub GetNewToken()
     Set oIExplorer = New InternetExplorer
     
     With oIExplorer
-        .Navigate CreateAuthRequest()
+        .navigate CreateAuthRequest()
         .AddressBar = False
         .MenuBar = False
         .Resizable = False

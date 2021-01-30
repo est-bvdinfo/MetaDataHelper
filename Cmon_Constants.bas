@@ -1,6 +1,6 @@
 Attribute VB_Name = "Cmon_Constants"
 Option Explicit
-Public Const MODULE_VERSION = "0.2.0"
+Public Const MODULE_VERSION = "0.2.1"
 Public Const MODULE_NAME = "MetaDataHelper"
 Public Const MODULE_BUILD = "1"
 Public Const MODULE_AUDIENCE = "BvdInternalTool"

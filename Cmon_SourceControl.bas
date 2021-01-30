@@ -337,59 +337,63 @@ responseText = HttpGET(REPOSITORY & "commits/master")
 'populate html doc from response Text
 html.body.innerHTML = responseText
     
+'try to find an element that is the less prone to be change overtime
+Set posts = html.getElementsByTagName("a")
 
-Set posts = html.getElementsByClassName("link-gray-dark text-bold js-navigation-open")
+If InStr(html.body.innerHTML, MODULE_NAME) = 0 Then
+    LogItem "[CheckNewChangeset] enable to reach github or parse the page"
+    CheckNewChangeset = GitHubNotReached
+    Exit Function
+End If
 
-If InStr(html.body.innerHTML, MODULE_NAME) > 0 Then
 For Each post In posts
+    'check the element contains path to the commit if not go next
+    If InStr(LCase(post.href), LCase(MODULE_NAME) & "/commit") = 0 Then GoTo nextIteration:
+    
     currentTitle = post.innerText
     separatorPos = InStr(currentTitle, ":")
-        DebugLine "[CheckNewChangeset] " & currentTitle & " ==>" & separatorPos
         
-          'skip the line if other html markup and there is not semicolon
-        If (separatorPos > 0 And InStr(currentTitle, "<") = 0) Then
-            versionLine = Trim(Left(currentTitle, separatorPos - 1))
-            
-            'if finishes with a exclamation mark then skip because not a publishabe version
-            If Right(versionLine, 1) <> "!" Then
-                externVersions = Split(versionLine, ".")
-                'check if does the correct version formating or skip the formating
-                If UBound(externVersions) >= 2 Then
-                    'create a comparable version
-                    On Error Resume Next
-                    externVersion = CInt(externVersions(0)) * 1000 + CInt(externVersions(1)) * 100 + CInt(externVersions(2))
-                    'find the internal version
-                    Dim internVersions: internVersions = Split(MODULE_VERSION, ".")
-                    internVersion = CInt(internVersions(0)) * 1000 + CInt(internVersions(1)) * 100 + CInt(internVersions(2))
-                    DebugLine "[CheckNewChangeset]: " & externVersion & " intern version " & internVersion
-                    'check if both are numeric then proceed to check
-                    If (IsNumeric(externVersion) And IsNumeric(internVersion)) Then
-                        If (externVersion > internVersion) Then
-                            'flag status
-                            CheckNewChangeset = ToUpdate
-                            ToUpGradeVersion = Trim(versionLine)
-                            Exit For
-                        Else
-                            'flag status
-                            CheckNewChangeset = Uptodate
-                            LogItem "[CheckNewChangeset] your current version " & MODULE_VERSION & " is up to date"
-                        End If
-    
-                    End If
-                'non incremented update (merge or forking)
-                End If
-            Else
-                DebugLine "Version: " & versionLine & " .Publish made in debug mode, not taken into account"
-            
+    'skip the line if other html markup and there is not semicolon
+    If (separatorPos > 0 And InStr(currentTitle, "<") = 0) Then
+        versionLine = Trim(Left(currentTitle, separatorPos - 1))
+        
+        DebugLine "[CheckNewChangeset] commit: " & versionLine
+        'if finishes with a exclamation mark then skip for non devs
+        If Right(versionLine, 1) = "!" And Not fsoFolderExists(Settings.CurrentProjectFolder & ".git") Then GoTo nextIteration:
+        
+        'remove exclamation mark
+        versionLine = Replace(versionLine, "!", "")
+        'get numbers
+        externVersions = Split(versionLine, ".")
+        
+        'check if does the correct version formating or exit
+        If UBound(externVersions) < 2 Then GoTo nextIteration:
+                
+        'create a comparable version
+        On Error Resume Next
+        externVersion = CInt(externVersions(0)) * 1000 + CInt(externVersions(1)) * 100 + CInt(externVersions(2))
+        'find the internal version
+        Dim internVersions: internVersions = Split(MODULE_VERSION, ".")
+        internVersion = CInt(internVersions(0)) * 1000 + CInt(internVersions(1)) * 100 + CInt(internVersions(2))
+        DebugLine "[CheckNewChangeset]:  extern " & externVersion & " vs intern version " & internVersion
+        
+        'check if both are numeric then proceed to check
+        If (IsNumeric(externVersion) And IsNumeric(internVersion)) Then
+            If (externVersion > internVersion) Then
+                ToUpGradeVersion = Trim(versionLine)
+                CheckNewChangeset = ToUpdate
+                LogItem "[CheckNewChangeset] update required to " & versionLine
+                Exit Function
             End If
-            ' no content to screen
-             LogItem "[CheckNewChangeset] enable to parse commit page"
         End If
+            
+    End If
+          
+nextIteration:
     Next post
-    Else
-    LogItem "[CheckNewChangeset] enable to reach github"
-     CheckNewChangeset = GitHubNotReached
-End If
+
+LogItem "[CheckNewChangeset] your current version " & MODULE_VERSION & " is up to date"
+
 End Function
 Public Sub CommitToGIT()
 

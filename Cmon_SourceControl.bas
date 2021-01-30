@@ -211,9 +211,9 @@ End Sub
 Public Sub UpdateInstaller()
  Dim http
  Dim SH
- Dim oZip
- Dim zipFileName, downloadLink
-  Dim fso As FileSystemObject
+ Dim oZip, zipFullPath
+ Dim zipFileName, downloadLink As String
+ Dim fso As FileSystemObject
  Dim oFolderItem, subFolder, objFolder
  Dim Status As updateStatuses
  Dim currentUpdateFolder As String
@@ -241,7 +241,7 @@ Public Sub UpdateInstaller()
 End If
  
 
- downloadLink = "https://codeload.github.com/VBA-tools/VBA-Dictionary/zip/master"
+ downloadLink = REPOSITORY & "archive/master.zip"
  zipFileName = "Update" & ToUpGradeVersion & ".zip"
  currentUpdateFolder = fsoCreateFolder("Updates", Settings.UserSystemFolder)
 
@@ -262,29 +262,31 @@ End If
     'when download ran smoothly proceed with the download and the zip file save
 
     'Creating and filling binaries base on the received zip
+    zipFullPath = currentUpdateFolder & zipFileName
+    
    '! Not using fsoWriteFile since it's binary target
     Dim bStrm: Set bStrm = CreateObject("Adodb.Stream")
     With bStrm
         .Type = 1 '//binary
         .Open
         .Write http.responseBody
-        .savetofile currentUpdateFolder & zipFileName, 2 '//overwrite
+        .savetofile zipFullPath, 2 '//overwrite
     End With
     LogItem "[UpdateDownloadAndExtract] " & zipFileName & " downloaded"
     
-    'open the Zip file and search for the pspad root folder under 'est_bvdinfo_persidhandler.....'
+    'open the Zip file and search for the pspad root folder
     Set SH = CreateObject("Shell.Application")
-    Set oZip = SH.Namespace(Settings.UserSystemFolder & zipFileName)
+    Set oZip = SH.Namespace((zipFullPath)) 'need to keep double parenthesis
     
     'loop for each FolderItem in the zip
     For Each oFolderItem In oZip.Items
-        DebugLine "ExtractFilesFromZip\" & oFolderItem.Name
+        DebugLine "[UpdateDownloadAndExtract] ExtractFilesFromZip ==>" & oFolderItem.Name
         'find the PspadRoot Folder
-        If InStr(oFolderItem.Name, MODULE_OWNER) > 0 And oFolderItem.IsFolder Then
+        If InStr(LCase(oFolderItem.Name), LCase(MODULE_NAME)) > 0 And oFolderItem.IsFolder Then
             'Once the root folder has been found convert FolderItem into a proper Folder Object
-            Set subFolder = SH.Namespace(fso.GetAbsolutePathName(Settings.UserSystemFolder & zipFileName & "\" & oFolderItem.Name))
+            Set subFolder = SH.Namespace(fso.GetAbsolutePathName(zipFullPath & "\" & oFolderItem.Name))
             'create a recipient folder for the zip files to be extracted
-            Set objFolder = SH.Namespace(Settings.CurrentProjectFolder)
+            Set objFolder = SH.Namespace((Settings.CurrentProjectFolder))
             'copy zip files to SysFol without progress bar
             LogItem "[UpdateDownloadAndExtract] upgrade to version:" & ToUpGradeVersion & " as soon as the user allows it"
             On Error Resume Next
@@ -312,6 +314,7 @@ End If
  Set bStrm = Nothing
  Set SH = Nothing
  Set http = Nothing
+ Set oZip = Nothing
 
 End Sub
 

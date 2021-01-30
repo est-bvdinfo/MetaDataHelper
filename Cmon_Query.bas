@@ -5,10 +5,10 @@ Public Enum RequestType
     REST = 3
 End Enum
 
-Private Declare Function ShellExecute _
+Public Declare Function ShellExecute _
                             Lib "shell32.dll" _
                             Alias "ShellExecuteA" ( _
-                            ByVal hwnd As Long, _
+                            ByVal hWnd As Long, _
                             ByVal lpOperation As String, _
                             ByVal lpFile As String, _
                             ByVal lpParameters As String, _

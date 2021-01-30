@@ -93,17 +93,13 @@ Set fso = CreateObject("scripting.filesystemobject")
     
     'generic folder
 
-    vbaProjectsFolder = GetProjectDevFolder(m_usersysFolder)
+    vbaProjectsFolder = GetProjectsDevFolder(m_usersysFolder)
 
     'specific project
-    m_currentProjectFolder = fsoCreateFolder(UCase(Replace(MODULE_NAME, " ", "_")), vbaProjectsFolder)
-
-    
-
-    
+    m_currentProjectFolder = fsoCreateFolder(UCase(MODULE_NAME), vbaProjectsFolder)
+  
 Set WshNetwork = Nothing
 Set WshShell = Nothing
-
 
 m_isInitialized = True
 End Sub

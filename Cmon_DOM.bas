@@ -114,20 +114,26 @@ Set fso = CreateObject("Scripting.FileSystemObject")
 Set oStreamRecoder = fso.CreateTextFile(sFolder & filename & "." & sExtention, True, False)
     DebugLine "[fsoWriteFile] type of content object" & TypeName(Content)
     
-    If TypeName(Content) <> "Null" Then oStreamRecoder.Write (Content)
+    If TypeName(Content) <> "Null" Then oStreamRecoder.Write CStr(Content)
          LogItem filename & "." & sExtention & " created in folder '" & sFolder & "'"
     Set oStreamRecoder = Nothing
     Set fso = Nothing
  
 End Sub
 
-Public Function fsoReadToLog() As String
+Public Function fsoReadToLog(Optional ByVal filePath As String) As String
 Dim fsoDef
 Dim tsDef
 Dim sLine As String
 Dim outputPath:
-outputPath = Settings.UserSystemFolder & "CmdOuput.dat"
-   Set fsoDef = CreateObject("Scripting.FileSystemObject")
+Set fsoDef = CreateObject("Scripting.FileSystemObject")
+
+If (Len(filePath) = 0) Then
+    outputPath = Settings.UserSystemFolder & "CmdOuput.dat"
+Else
+    outputPath = filePath
+End If
+
    If fsoDef.FileExists(outputPath) Then
        Set tsDef = fsoDef.OpenTextFile(outputPath)
         Do While tsDef.AtEndOfStream <> True

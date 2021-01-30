@@ -6,7 +6,7 @@ Attribute VB_Name = "Cmon_TextProcessing"
   Private Declare PtrSafe Function GlobalAlloc Lib "kernel32" (ByVal wFlags As LongPtr, _
     ByVal dwBytes As LongPtr) As LongPtr
   Private Declare PtrSafe Function CloseClipboard Lib "user32" () As LongPtr
-  Private Declare PtrSafe Function OpenClipboard Lib "user32" (ByVal hwnd As LongPtr) As LongPtr
+  Private Declare PtrSafe Function OpenClipboard Lib "user32" (ByVal hWnd As LongPtr) As LongPtr
   Private Declare PtrSafe Function EmptyClipboard Lib "user32" () As LongPtr
   Private Declare PtrSafe Function lstrcpy Lib "kernel32" (ByVal lpString1 As Any, _
     ByVal lpString2 As Any) As LongPtr
@@ -18,7 +18,7 @@ Attribute VB_Name = "Cmon_TextProcessing"
   Private Declare Function GlobalAlloc Lib "kernel32" (ByVal wFlags As Long, _
     ByVal dwBytes As Long) As Long
   Private Declare Function CloseClipboard Lib "user32" () As Long
-  Private Declare Function OpenClipboard Lib "user32" (ByVal hwnd As Long) As Long
+  Private Declare Function OpenClipboard Lib "user32" (ByVal hWnd As Long) As Long
   Private Declare Function EmptyClipboard Lib "user32" () As Long
   Private Declare Function lstrcpy Lib "kernel32" (ByVal lpString1 As Any, _
     ByVal lpString2 As Any) As Long

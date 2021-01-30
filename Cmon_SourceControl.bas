@@ -2,11 +2,10 @@ Attribute VB_Name = "Cmon_SourceControl"
 Option Explicit
 Public UpdatesHasBeenChecked As Boolean
 Public ToUpGradeVersion As String
-Public IsSourceTreeInstalled As Boolean
 Public Enum updateStatuses
     Uptodate
     ToUpdate
-    RssNotReached
+    GitHubNotReached
 End Enum
 
 Private Sub ExportModules(sourceFolderToBeDisplayed As Boolean)
@@ -131,7 +130,7 @@ Private Sub ImportModules()
     Set listOfModules = New Dictionary
     For Each objFile In objFSO.GetFolder(szImportPath).Files
     
-       If LCase(objFile.Name) <> "sourcecontrol.bas" Then
+       If LCase(objFile.Name) <> "GitHub.bas" Then
         If (objFSO.GetExtensionName(objFile.Name) = "cls") Or _
             (objFSO.GetExtensionName(objFile.Name) = "frm") Or _
             (objFSO.GetExtensionName(objFile.Name) = "bas") Then
@@ -149,7 +148,7 @@ Private Sub ImportModules()
             ' Extract this component name
             sName$ = .VBComponents(i%).CodeModule.Name
             ' Do not change the source of this module which is currently running
-            If LCase(sName$) <> "sourcecontrol" Then
+            If LCase(sName$) <> "GitHub" Then
                 ' Import relevant source file if it exists
                 If .VBComponents(i%).Type = 1 Then
                     ' Standard Module
@@ -218,6 +217,7 @@ Public Sub UpdateInstaller()
  Dim oFolderItem, subFolder, objFolder
  Dim Status As updateStatuses
  Dim currentUpdateFolder As String
+ Dim responseBody
  
  'instanciate settings
  If Settings Is Nothing Then Set Settings = New CmonSettings
@@ -225,7 +225,7 @@ Public Sub UpdateInstaller()
  
  'check if update is required
  Status = CheckNewChangeset
- If Status = RssNotReached Then
+ If Status = GitHubNotReached Then
      MsgBox "RSS Feed seems not to be accessible anymore" _
      & vbCrLf & "Please check with EST if a manual update is not required or your firewall is not blocking " & MODULE_NAME _
      , 48, "Check for update"
@@ -241,15 +241,15 @@ Public Sub UpdateInstaller()
 End If
  
 
- downloadLink = REPOSITORY & "get/master.zip"
+ downloadLink = "https://codeload.github.com/VBA-tools/VBA-Dictionary/zip/master"
  zipFileName = "Update" & ToUpGradeVersion & ".zip"
  currentUpdateFolder = fsoCreateFolder("Updates", Settings.UserSystemFolder)
 
-
  On Error Resume Next
 
-  Set http = CreateObject("Microsoft.XMLHTTP")
+  Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
   Set fso = CreateObject("Scripting.FileSystemObject")
+  
   http.Open "GET", downloadLink, False
   http.send
   'in case of download error stop the download
@@ -318,10 +318,9 @@ End Sub
 Private Function CheckNewChangeset() As updateStatuses
 
 Dim html As New HTMLDocument
-Dim http As New XMLHTTP60
 Dim posts As MSHTML.IHTMLElementCollection
 Dim post As MSHTML.IHTMLElement
-
+Dim responseText
 Dim currentTitle
 Dim currentLine
 Dim externVersions
@@ -334,30 +333,18 @@ Dim SH
 CheckNewChangeset = Uptodate
 ToUpGradeVersion = MODULE_VERSION
 
-'fetch the page manually as headerRequests of HTTPGet are scrambling the BitBucket
-With http
-    .Open "GET", REPOSITORY & "wiki/Home", False
-    .send
+responseText = HttpGET(REPOSITORY & "commits/master")
+'populate html doc from response Text
+html.body.innerHTML = responseText
     
-    If DEBUGMODE = "ON" Then
-        fsoWriteFile .responseText, "wiki", "html", Settings.UserSystemFolder
-    End If
-    
-    'populate html doc from response Text
-    html.body.innerHTML = .responseText
-    
-End With
 
-'empty http object
-Set http = Nothing
-
-Set posts = html.getElementsByTagName("li")
+Set posts = html.getElementsByClassName("link-gray-dark text-bold js-navigation-open")
 
 If InStr(html.body.innerHTML, MODULE_NAME) > 0 Then
 For Each post In posts
     currentTitle = post.innerText
     separatorPos = InStr(currentTitle, ":")
-        DebugLine currentTitle & " : " & separatorPos
+        DebugLine "[CheckNewChangeset] " & currentTitle & " ==>" & separatorPos
         
           'skip the line if other html markup and there is not semicolon
         If (separatorPos > 0 And InStr(currentTitle, "<") = 0) Then
@@ -378,10 +365,13 @@ For Each post In posts
                     'check if both are numeric then proceed to check
                     If (IsNumeric(externVersion) And IsNumeric(internVersion)) Then
                         If (externVersion > internVersion) Then
+                            'flag status
                             CheckNewChangeset = ToUpdate
                             ToUpGradeVersion = Trim(versionLine)
                             Exit For
                         Else
+                            'flag status
+                            CheckNewChangeset = Uptodate
                             LogItem "[CheckNewChangeset] your current version " & MODULE_VERSION & " is up to date"
                         End If
     
@@ -393,11 +383,12 @@ For Each post In posts
             
             End If
             ' no content to screen
+             LogItem "[CheckNewChangeset] enable to parse commit page"
         End If
     Next post
     Else
-    LogItem "[CheckNewChangeset] /rss/channel not found"
-     CheckNewChangeset = RssNotReached
+    LogItem "[CheckNewChangeset] enable to reach github"
+     CheckNewChangeset = GitHubNotReached
 End If
 End Function
 Public Sub CommitToGIT()
@@ -407,11 +398,11 @@ Dim commitFeedback As String
 Dim commitComment, pushFeedback As String
 
 If Settings Is Nothing Then Set Settings = New CmonSettings
-Dim fsfol: Set fsfol = CreateObject("Scripting.FileSystemObject")
 
-'check if the .hg repository exists'
+'check if the .git repository exists'
 
-If IsSourceTreeInstalled Then
+If fsoFolderExists(Settings.CurrentProjectFolder & ".git") Then
+
  'Export all the modules to the root folder
    Call ExportModules(False)
  
@@ -438,7 +429,7 @@ If IsSourceTreeInstalled Then
        'check they are no error on shell level²'
              
          If (retBack <> 0) Then 'failed
-            LogItem "ComitToHGMercurial No commit performed.  Error in the shell execution. CODE(" & retBack & ")"
+            LogItem "ComitToGIT No commit performed.  Error in the shell execution. CODE(" & retBack & ")"
             MsgBox "Commit to Repository failed", 64, "Commit failed. Error in the shell execution. CODE(" & retBack & ")"
             
          Else
@@ -453,7 +444,7 @@ If IsSourceTreeInstalled Then
             
                 stringToExecute = "Git.exe push origin " & rgAddDblQuote(branchName)
          
-                If MsgBox("Publish last commit on BitBucket?" & vbCrLf & commitFeedback, 1, "Push to SourceControl") = 1 Then
+                If MsgBox("Publish last commit on BitBucket?" & vbCrLf & commitFeedback, 1, "Push to GitHub") = 1 Then
                     retBack = ShellRun(stringToExecute, pushFeedback, Settings.CurrentProjectFolder)
                 
                     'execute the publish action'
@@ -461,10 +452,10 @@ If IsSourceTreeInstalled Then
 
                   If retBack <> 0 Then
                       LogItem "[ComitToGIT] Push Failed. Error in the shell execution. CODE(" & retBack & ")" & vbCrLf & pushFeedback
-                      MsgBox "Push to Bitbucked failed. Error in the shell execution. CODE(" & retBack & ")" & vbCrLf & pushFeedback, 64, "Push to SourceControl"
+                      MsgBox "Push to Bitbucked failed. Error in the shell execution. CODE(" & retBack & ")" & vbCrLf & pushFeedback, 64, "Push to GitHub"
                   Else
-                     MsgBox "Push to SourceControl succeeded" & vbCrLf & pushFeedback, 1, "Push on SourceControl"
-                     LogItem "[ComitToGIT] Push to SourceControl succeeded  Code :" & retBack
+                     MsgBox "Push to GitHub succeeded" & vbCrLf & pushFeedback, 1, "Push on GitHub"
+                     LogItem "[ComitToGIT] Push to GitHub succeeded  Code :" & retBack
                 
                   End If
                 End If
@@ -478,68 +469,61 @@ Else
 End If
 End Sub
 
-Public Function GetProjectDevFolder(userFolder As String) As String
+Public Function GetProjectsDevFolder(userFolder As String) As String
 
-Dim xmlDoc, bookmarks, bookMarkNode
-Dim fso, ts, WshShell, sPath, sProject
-Dim xmlString, defaultDevFolders As String
-Dim sourceTreeBookMarkFile, sourceTreeAppDataFolder As String
+Dim fso, WshShell, sourceFile, tempFolder, tempFile
+Dim gitToolAppDataFolder, gitToolRepositoryFile, line As String
+
+'set default folder in case the below get interupted
+GetProjectsDevFolder = userFolder
+On Error Resume Next
 
 Set fso = CreateObject("Scripting.FileSystemObject")
 Set WshShell = CreateObject("WScript.Shell")
 
-'initialised required files
-sourceTreeAppDataFolder = WshShell.ExpandEnvironmentStrings("%userprofile%") & "\AppData\Local\Atlassian\SourceTree"
-sourceTreeBookMarkFile = sourceTreeAppDataFolder & "\bookmarks.xml"
-
-GetProjectDevFolder = userFolder
-
 'check whether Altassian sourcetree is installed
-If fsoFolderExists(sourceTreeAppDataFolder) Then
-   
-   'if found then parse sourcetree bookmark to find the developpment path
-    ' get the bookmark file
-    
-    If fso.FileExists(sourceTreeBookMarkFile) Then
-      Set xmlDoc = CreateObject("Msxml2.DOMDocument")
-      Set ts = fso.OpenTextFile(sourceTreeBookMarkFile, 1)
-      xmlString = ts.ReadALL
-      xmlDoc.async = "false"
-      xmlDoc.LoadXML xmlString
-      DebugLine "[GetProjectDevFolder] upload bookmark"
-      
-      'check that the settings are valid
-      If IsXMLValid(xmlString, USERSETTINGS) = False Then Exit Function
-       
-       'parse bookmarks
-       For Each bookMarkNode In xmlDoc.SelectNodes("/ArrayOfTreeViewNode/TreeViewNode")
-            sProject = bookMarkNode.SelectSingleNode("Name").text
-            sPath = bookMarkNode.SelectSingleNode("Path").text
-            DebugLine "[" & sProject & "] = [" & sPath & "]"
-            
-            'escape when found
-            If UCase(Trim(sProject)) = UCase(Trim(MODULE_NAME)) Then
-                GetProjectDevFolder = Left(sPath, InStrRev(sPath, "\"))
-                'activate the IsUnderSourceTree boolean for commits
-                    IsSourceTreeInstalled = True
-                LogItem "[GetProjectDevFolder] path dev found " & GetProjectDevFolder
+gitToolAppDataFolder = WshShell.ExpandEnvironmentStrings("%userprofile%") & "\AppData\Roaming\syntevo\SmartGit"
+Set WshShell = Nothing
+
+If fsoFolderExists(gitToolAppDataFolder) Then
+'parse subfolder in the search of the file with the repository list
+    For Each tempFolder In fso.GetFolder(gitToolAppDataFolder).SubFolders
+        For Each tempFile In tempFolder.Files
+            If LCase(tempFile.Name) = LCase("repositories.yml") Then
+                gitToolRepositoryFile = tempFile.Path
                 Exit For
             End If
-                 
-       Next bookMarkNode
-       
-    Else
-        DebugLine "[GetProjectDevFolder]  can't find bookmark file"
-        
-    End If
+         Next
+         If Len(gitToolRepositoryFile) > 10 Then Exit For
+    Next
     
-End If
+    'clean memory
+    Set tempFolder = Nothing
+    Set tempFile = Nothing
 
-xmlString = ""
-Set ts = Nothing
-Set WshShell = Nothing
-Set xmlDoc = Nothing
-Set bookmarks = Nothing
-Set bookMarkNode = Nothing
+   'if found then parse sourcetree bookmark to find the developpment path
+    ' get the bookmark file
+    If fso.FileExists(gitToolRepositoryFile) Then
+    
+        Set sourceFile = fso.OpenTextFile(gitToolRepositoryFile, ForReading)
+        While Not sourceFile.AtEndOfStream ' while we are not finished reading through the file
+            line = Trim(LCase(sourceFile.ReadLine))
+            DebugLine "[GetProjectsDevFolder] repo file line: " & line
+            If Left(line, 4) = "root" And Right(line, Len(MODULE_NAME) + 1) = LCase(MODULE_NAME) & ":" Then
+                GetProjectsDevFolder = Mid(line, 5, Len(line) - (Len(MODULE_NAME) + 5))
+                LogItem "[GetProjectsDevFolder] path dev found " & GetProjectsDevFolder
+            End If
+        Wend
+        sourceFile.Close
+
+    Else
+        DebugLine "[GetProjectsDevFolder] can't find repository file"
+    End If
+Else
+    DebugLine "[GetProjectsDevFolder] can't find Git Tool folder"
+
+End If
+Set fso = Nothing
+Set sourceFile = Nothing
 
 End Function

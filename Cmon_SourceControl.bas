@@ -288,6 +288,10 @@ End If
             'create a recipient folder for the zip files to be extracted
             Set objFolder = SH.Namespace((Settings.CurrentProjectFolder))
             'copy zip files to SysFol without progress bar
+            MsgBox "You are about to be prompted to allow a bulk files copy" _
+                    & vbCrLf & "Please select the Copy & Replace option" _
+                    & vbCrLf & "and apply it to all files" & vbCrLf & MODULE_OWNER
+                    
             LogItem "[UpdateDownloadAndExtract] upgrade to version:" & ToUpGradeVersion & " as soon as the user allows it"
             On Error Resume Next
                 objFolder.CopyHere subFolder.Items, 4
@@ -461,8 +465,8 @@ If fsoFolderExists(Settings.CurrentProjectFolder & ".git") Then
                       LogItem "[ComitToGIT] Push Failed. Error in the shell execution. CODE(" & retBack & ")" & vbCrLf & pushFeedback
                       MsgBox "Push to Bitbucked failed. Error in the shell execution. CODE(" & retBack & ")" & vbCrLf & pushFeedback, 64, "Push to GitHub"
                   Else
-                     MsgBox "Push to GitHub succeeded" & vbCrLf & pushFeedback, 1, "Push on GitHub"
-                     LogItem "[ComitToGIT] Push to GitHub succeeded  Code :" & retBack
+                     MsgBox "Push to GitHub" & vbCrLf & pushFeedback, 1, "Push on GitHub"
+                     LogItem "[ComitToGIT] Push to GitHub " & pushFeedback
                 
                   End If
                 End If

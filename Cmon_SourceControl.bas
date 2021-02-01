@@ -148,7 +148,7 @@ Private Sub ImportModules()
             ' Extract this component name
             sName$ = .VBComponents(i%).CodeModule.Name
             ' Do not change the source of this module which is currently running
-            If LCase(sName$) <> "GitHub" Then
+            If LCase(sName$) <> "Cmon_SourceControl" Then
                 ' Import relevant source file if it exists
                 If .VBComponents(i%).Type = 1 Then
                     ' Standard Module
@@ -482,59 +482,39 @@ End Sub
 
 Public Function GetProjectsDevFolder(userFolder As String) As String
 
-Dim fso, WshShell, sourceFile, tempFolder, tempFile
-Dim gitToolAppDataFolder, gitToolRepositoryFile, line As String
-
+Dim WshShell
+Dim line, lines
+Dim gitConfigfileContent As String
 'set default folder in case the below get interupted
 GetProjectsDevFolder = userFolder
-On Error Resume Next
 
-Set fso = CreateObject("Scripting.FileSystemObject")
+
+
+'fetch repository from
 Set WshShell = CreateObject("WScript.Shell")
-
-'check whether Altassian sourcetree is installed
-gitToolAppDataFolder = WshShell.ExpandEnvironmentStrings("%userprofile%") & "\AppData\Roaming\syntevo\SmartGit"
+ShellRun "Git.exe config --list", gitConfigfileContent, WshShell.ExpandEnvironmentStrings("%userprofile%")
 Set WshShell = Nothing
 
-If fsoFolderExists(gitToolAppDataFolder) Then
-'parse subfolder in the search of the file with the repository list
-    For Each tempFolder In fso.GetFolder(gitToolAppDataFolder).SubFolders
-        For Each tempFile In tempFolder.Files
-            If LCase(tempFile.Name) = LCase("repositories.yml") Then
-                gitToolRepositoryFile = tempFile.Path
+    'split output into lines
+    lines = Split(gitConfigfileContent, vbCrLf)
+
+'check that content is available
+    
+    If UBound(lines) > 1 Then
+    For Each line In lines
+        line = Trim(LCase(line))
+        DebugLine "[GetProjectsDevFolder] repo file line: " & line
+        If InStr(line, "recentrepo") > 0 And Right(line, Len(MODULE_NAME)) = LCase(MODULE_NAME) Then
+                GetProjectsDevFolder = Mid(line, 16, Len(line) - (Len(MODULE_NAME) + 15))
+                LogItem "[GetProjectsDevFolder] path dev found " & GetProjectsDevFolder
                 Exit For
             End If
-         Next
-         If Len(gitToolRepositoryFile) > 10 Then Exit For
-    Next
-    
-    'clean memory
-    Set tempFolder = Nothing
-    Set tempFile = Nothing
-
-   'if found then parse sourcetree bookmark to find the developpment path
-    ' get the bookmark file
-    If fso.FileExists(gitToolRepositoryFile) Then
-    
-        Set sourceFile = fso.OpenTextFile(gitToolRepositoryFile, ForReading)
-        While Not sourceFile.AtEndOfStream ' while we are not finished reading through the file
-            line = Trim(LCase(sourceFile.ReadLine))
-            DebugLine "[GetProjectsDevFolder] repo file line: " & line
-            If Left(line, 4) = "root" And Right(line, Len(MODULE_NAME) + 1) = LCase(MODULE_NAME) & ":" Then
-                GetProjectsDevFolder = Mid(line, 5, Len(line) - (Len(MODULE_NAME) + 5))
-                LogItem "[GetProjectsDevFolder] path dev found " & GetProjectsDevFolder
-            End If
-        Wend
-        sourceFile.Close
+    Next line
 
     Else
-        DebugLine "[GetProjectsDevFolder] can't find repository file"
+        DebugLine "[GetProjectsDevFolder] can't find any repository in git config "
     End If
-Else
-    DebugLine "[GetProjectsDevFolder] can't find Git Tool folder"
 
-End If
-Set fso = Nothing
-Set sourceFile = Nothing
+
 
 End Function

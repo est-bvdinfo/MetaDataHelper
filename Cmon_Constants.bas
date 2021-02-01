@@ -10,6 +10,7 @@ Public Const MODULE_OWNER = "estaquet"
 Public Const HTTPTimeOut = 30
 Public Const REPOSITORY = "https://github.com/est-bvdinfo/MetaDataHelper/"
 Public Const USERSETTINGS = "MetaDataHelper.XML"
+Public Const SOURCE_CONTROLER = "Cmon_SourceControl"
 Public Settings As CmonSettings
 
 

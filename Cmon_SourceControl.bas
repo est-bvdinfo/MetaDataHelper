@@ -148,7 +148,7 @@ Private Sub ImportModules()
             ' Extract this component name
             sName$ = .VBComponents(i%).CodeModule.Name
             ' Do not change the source of this module which is currently running
-            If LCase(sName$) <> "Cmon_SourceControl" Then
+            If LCase(sName$) <> SOURCE_CONTROLER Then
                 ' Import relevant source file if it exists
                 If .VBComponents(i%).Type = 1 Then
                     ' Standard Module

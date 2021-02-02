@@ -84,103 +84,41 @@ Private Sub ExportModules(sourceFolderToBeDisplayed As Boolean)
 End Sub
 
 
-Private Sub ImportModules()
-    Dim wkbTarget As Excel.Workbook
+Private Sub ImportModules(wkbTarget As Excel.Workbook, targetSourceFolder As String)
     Dim objFSO As FileSystemObject
     Dim objFile As Scripting.File
-    Dim szTargetWorkbook As String
-    Dim szImportPath As String
     Dim i%, sName$
     Dim listOfModules As Dictionary
     Dim moduleName, cmpComponents
 
 
-   ' If ActiveWorkbook.Name = ThisWorkbook.Name Then
-   '     MsgBox "Select another destination workbook" & _
-   '     "Not possible to import in this workbook "
-   '     Exit Sub
-   ' End If
-
-    'Get the path to the folder with modules
-    If Settings.CurrentProjectFolder = "Error" Then
-        MsgBox "Import Folder not exist"
-        Exit Sub
-    End If
-
-    ''' NOTE: This workbook must be open in Excel.
-    szTargetWorkbook = ActiveWorkbook.Name
-    Set wkbTarget = Application.Workbooks(szTargetWorkbook)
-    
-    If wkbTarget.VBProject.Protection = 1 Then
-    MsgBox "The VBA in this workbook is protected," & _
-        "not possible to Import the code"
-    Exit Sub
-    End If
-
-    ''' NOTE: Path where the code modules are located.
-    szImportPath = Settings.CurrentProjectFolder
-        
-    Set objFSO = New Scripting.FileSystemObject
-    If objFSO.GetFolder(szImportPath).Files.Count = 0 Then
-       MsgBox "There are no files to import"
-       Exit Sub
-    End If
-
-    '''1. load all the code modules in a collection
+    'load all the code modules in a collection
     Set listOfModules = New Dictionary
-    For Each objFile In objFSO.GetFolder(szImportPath).Files
-    
-       If LCase(objFile.Name) <> "GitHub.bas" Then
-        If (objFSO.GetExtensionName(objFile.Name) = "cls") Or _
-            (objFSO.GetExtensionName(objFile.Name) = "frm") Or _
-            (objFSO.GetExtensionName(objFile.Name) = "bas") Then
-            'check file does not exist yet
-            If Not listOfModules.Exists(objFSO.GetBaseName(objFile.Name)) Then listOfModules.Add objFSO.GetBaseName(objFile.Name), objFile.Path
-        End If
-       End If
-        
-    Next objFile
-    
-    ' 2. Iterate all components and attempt to import their source from the network share
-    With ThisWorkbook.VBProject
-        '2.1 Process backwords as we are working through a live array while removing/adding items
-        For i% = .VBComponents.Count To 1 Step -1
-            ' Extract this component name
-            sName$ = .VBComponents(i%).CodeModule.Name
-            ' Do not change the source of this module which is currently running
-            If LCase(sName$) <> SOURCE_CONTROLER Then
-                ' Import relevant source file if it exists
-                If .VBComponents(i%).Type = 1 Then
-                    ' Standard Module
-                    .VBComponents.Remove .VBComponents(sName$)
-                    .VBComponents.Import filename:=szImportPath & sName$ & ".bas"
-                    If listOfModules.Exists(sName$) Then listOfModules.Remove sName$
-                ElseIf .VBComponents(i%).Type = 2 Then
-                    ' Class
-                    .VBComponents.Remove .VBComponents(sName$)
-                    .VBComponents.Import filename:=szImportPath & sName$ & ".cls"
-                    If listOfModules.Exists(sName$) Then listOfModules.Remove sName$
-                ElseIf .VBComponents(i%).Type = 3 Then
-                    ' Form
-                    .VBComponents.Remove .VBComponents(sName$)
-                    .VBComponents.Import filename:=szImportPath & sName$ & ".frm"
-                    If listOfModules.Exists(sName$) Then listOfModules.Remove sName$
-                Else
-                    ' UNHANDLED/UNKNOWN COMPONENT TYPE
+    For Each objFile In objFSO.GetFolder(targetSourceFolder).Files
+       If LCase(objFile.Name) <> SOURCE_CONTROLER Then
+            If (objFSO.GetExtensionName(objFile.Name) = "cls") Or _
+                (objFSO.GetExtensionName(objFile.Name) = "frm") Or _
+                (objFSO.GetExtensionName(objFile.Name) = "bas") Then
+                'check file does not exist yet
+                If Not listOfModules.Exists(objFSO.GetBaseName(objFile.Name)) Then
+                    listOfModules.Add objFSO.GetBaseName(objFile.Name), objFile.Path
                 End If
             End If
-        Next i
-         '2.2 all the existing files have been replaced. Now add the new ones
-         For Each moduleName In listOfModules.Keys()
-            .VBComponents.Import filename:=listOfModules(moduleName)
-         Next
+       End If
+    Next objFile
+   
+     'all the existing files have been replaced. Now add the new ones
+     For Each moduleName In listOfModules.Keys()
+        wkbTarget.VBProject.VBComponents.Import filename:=listOfModules(moduleName)
+     Next
         
-        End With
-    Set cmpComponents = wkbTarget.VBProject.VBComponents
-    
 
-    
-       MsgBox "Modules imported from" & szImportPath, , "importmade"
+    MsgBox "Modules imported from" & targetSourceFolder, , "import"
+   
+   Set objFSO = Nothing
+   Set objFile = Nothing
+   Set listOfModules = Nothing
+   
 End Sub
 
 Public Sub AutomatedUpdateCheck()
@@ -206,22 +144,24 @@ End If
      UpdatesHasBeenChecked = True
 
 End Sub
-
-
 Public Sub UpdateInstaller()
  Dim http
- Dim SH
+  Dim wkbTarget As Excel.Workbook
  Dim oZip, zipFullPath
  Dim zipFileName, downloadLink As String
- Dim fso As FileSystemObject
+
+
  Dim oFolderItem, subFolder, objFolder
  Dim Status As updateStatuses
- Dim currentUpdateFolder As String
- Dim responseBody
+ Dim rootSourceFolder, targetSourceFolder As String
  
  'instanciate settings
  If Settings Is Nothing Then Set Settings = New CmonSettings
  
+ Set wkbTarget = Application.Workbooks(ActiveWorkbook.Name)
+ 
+ 'check if the workbook is protected otherwise not possible to update
+ If wkbTarget.VBProject.Protection = 1 Then MsgBox "The VBA in this workbook is protected," & vbCrLf & "not possible to Import the code": Exit Sub
  
  'check if update is required
  Status = CheckNewChangeset
@@ -238,17 +178,19 @@ Public Sub UpdateInstaller()
          & vbCrLf & "Do you agree to proceed?", vbQuestion + vbYesNo, "Check for update") = vbNo) Then
         Exit Sub
      End If
-End If
+ End If
  
+
+ ' proceed withj update
+ On Error GoTo Skip_Import:
 
  downloadLink = REPOSITORY & "archive/master.zip"
  zipFileName = "Update" & ToUpGradeVersion & ".zip"
- currentUpdateFolder = fsoCreateFolder("Updates", Settings.UserSystemFolder)
-
- On Error Resume Next
+ rootSourceFolder = fsoCreateFolder("Updates", Settings.UserSystemFolder)
+ targetSourceFolder = Settings.CurrentProjectFolder
 
   Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
-  Set fso = CreateObject("Scripting.FileSystemObject")
+  Dim fso As FileSystemObject: Set fso = CreateObject("Scripting.FileSystemObject")
   
   http.Open "GET", downloadLink, False
   http.send
@@ -262,7 +204,7 @@ End If
     'when download ran smoothly proceed with the download and the zip file save
 
     'Creating and filling binaries base on the received zip
-    zipFullPath = currentUpdateFolder & zipFileName
+    zipFullPath = rootSourceFolder & zipFileName
     
    '! Not using fsoWriteFile since it's binary target
     Dim bStrm: Set bStrm = CreateObject("Adodb.Stream")
@@ -275,7 +217,7 @@ End If
     LogItem "[UpdateDownloadAndExtract] " & zipFileName & " downloaded"
     
     'open the Zip file and search for the pspad root folder
-    Set SH = CreateObject("Shell.Application")
+    Dim SH: Set SH = CreateObject("Shell.Application")
     Set oZip = SH.Namespace((zipFullPath)) 'need to keep double parenthesis
     
     'loop for each FolderItem in the zip
@@ -286,30 +228,55 @@ End If
             'Once the root folder has been found convert FolderItem into a proper Folder Object
             Set subFolder = SH.Namespace(fso.GetAbsolutePathName(zipFullPath & "\" & oFolderItem.Name))
             'create a recipient folder for the zip files to be extracted
-            Set objFolder = SH.Namespace((Settings.CurrentProjectFolder))
+            Set objFolder = SH.Namespace((targetSourceFolder))
+            
+            'check that there are files to be imported
+            If objFolder.Files.Count = 0 Then MsgBox "There are no files to import": Exit Sub
+
             'copy zip files to SysFol without progress bar
+            
             MsgBox "You are about to be prompted to allow a bulk files copy" _
                     & vbCrLf & "Please select the Copy & Replace option" _
                     & vbCrLf & "and apply it to all files" & vbCrLf & MODULE_OWNER
-                    
-            LogItem "[UpdateDownloadAndExtract] upgrade to version:" & ToUpGradeVersion & " as soon as the user allows it"
-            On Error Resume Next
-                objFolder.CopyHere subFolder.Items, 4
-              If Err.Number <> 0 Then
-                LogItem "[UpdateDownloadAndExtract]  ERROR ! Update install failed !"
-                LogItem "[UpdateDownloadAndExtract] (" & Err.Number & ") :" & Err.Description
-                Exit For
-                Err.Clear
-              Else
+            
+            'remove existing modules
+             Dim i%, sName$
+              With wkbTarget.VBProject
+                '2.1 remove all the code except sourcecontroler
+                For i% = .VBComponents.Count To 1 Step -1
+                    ' Extract this component name
+                    sName$ = .VBComponents(i%).CodeModule.Name
+                    ' Do not change the source of this module which is currently running
+                    If LCase(sName$) <> LCase(SOURCE_CONTROLER) And (.VBComponents(i%).Type = vbext_ct_ClassModule Or _
+                        .VBComponents(i%).Type = vbext_ct_MSForm Or .VBComponents(i%).Type = vbext_ct_StdModule) Then
+                        ' Standard Module
+                         .VBComponents.Remove .VBComponents(i%)
+                    End If
+                Next i
+              
+               End With
+               
+               'copy files in the right folder
+              LogItem "[UpdateDownloadAndExtract] upgrade to version:" & ToUpGradeVersion & " as soon as the user allows it"
+              objFolder.CopyHere subFolder.Items, 4
+              
               'transfer all the copied files into xlsm
-               Call ImportModules
-              End If
+               Call ImportModules(wkbTarget, targetSourceFolder)
+
               'need to keep this exit for otherwise all the files in the zip
               'will be copied over and over
-            Exit For
+              Exit For
         End If
     Next
   End If
+ 
+ 'error handeling
+Skip_Import:
+ If Err.Number <> 0 Then
+  LogItem "[UpdateDownloadAndExtract]  ERROR ! Update install failed !"
+  LogItem "[UpdateDownloadAndExtract] (" & Err.Number & ") :" & Err.Description
+  Err.Clear
+End If
  
  Set subFolder = Nothing
  Set objFolder = Nothing
@@ -506,6 +473,7 @@ Set WshShell = Nothing
         DebugLine "[GetProjectsDevFolder] repo file line: " & line
         If InStr(line, "recentrepo") > 0 And Right(line, Len(MODULE_NAME)) = LCase(MODULE_NAME) Then
                 GetProjectsDevFolder = Mid(line, 16, Len(line) - (Len(MODULE_NAME) + 15))
+                GetProjectsDevFolder = Replace(GetProjectsDevFolder, "/", "\")
                 LogItem "[GetProjectsDevFolder] path dev found " & GetProjectsDevFolder
                 Exit For
             End If
@@ -518,3 +486,5 @@ Set WshShell = Nothing
 
 
 End Function
+
+

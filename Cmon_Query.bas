@@ -58,7 +58,7 @@ Function HttpRequest(url As String, sType As String, RequestType As RequestType,
 
  End Function
 Function HttpGETRest(url As String)
-    HttpGET = HttpRequest(url, "GET", REST)
+    HttpGETRest = HttpRequest(url, "GET", REST)
     
 End Function
 Function HttpGET(url As String)

@@ -7,6 +7,13 @@ Public Enum updateStatuses
     ToUpdate
     GitHubNotReached
 End Enum
+Public Const MODULE_NAME = "MetaDataHelper"
+Public Const MODULE_BUILD = "1"
+Public Const MODULE_AUDIENCE = "BvdInternalTool"
+Public Const SOURCE_CONTROLER = "Cmon_SourceControl"
+Public Const REPOSITORY = "https://github.com/est-bvdinfo/MetaDataHelper/"
+Private targetSourceFolder As String
+
 
 Private Sub ExportModules(sourceFolderToBeDisplayed As Boolean)
     Dim bExport As Boolean
@@ -85,15 +92,19 @@ End Sub
 
 
 Private Sub ImportModules()
-    Dim objFSO As FileSystemObject
+    Dim objFSO As New FileSystemObject
     Dim objFile As Scripting.File
     Dim i%, sName$
     Dim listOfModules As Dictionary
     Dim moduleName, cmpComponents
-
+ 
+'need to replicate many existing objects as the module is meant to work standalone
      Dim wkbTarget As Excel.Workbook: Set wkbTarget = Application.Workbooks(ActiveWorkbook.Name)
-     Dim targetSourceFolder As String:  targetSourceFolder = Settings.CurrentProjectFolder
      
+     Dim WshShell As Object: Set WshShell = CreateObject("WScript.Shell")
+      
+     targetSourceFolder = WshShell.ExpandEnvironmentStrings("%APPDATA%") & "\" & MODULE_AUDIENCE
+     targetSourceFolder = GetProjectsDevFolder(targetSourceFolder) & UCase(MODULE_NAME)
     'load all the code modules in a collection
     Set listOfModules = New Dictionary
     For Each objFile In objFSO.GetFolder(targetSourceFolder).Files
@@ -152,7 +163,7 @@ Public Sub UpdateInstaller()
  Dim zipFileName, downloadLink As String
  Dim oFolderItem, subFolder, objFolder
  Dim Status As updateStatuses
- Dim rootSourceFolder, targetSourceFolder As String
+ Dim rootSourceFolder As String
  
  'instanciate settings
  If Settings Is Nothing Then Set Settings = New CmonSettings
@@ -231,7 +242,9 @@ Public Sub UpdateInstaller()
             Set objFolder = SH.Namespace((targetSourceFolder))
             
             'check that there are files to be imported
-            If objFolder.Files.Count = 0 Then MsgBox "There are no files to import": Exit Sub
+            Dim objFSO As New FileSystemObject
+            If objFSO.GetFolder(targetSourceFolder).Files.Count = 0 Then MsgBox "There are no files to import": Exit Sub
+     
 
             'copy zip files to SysFol without progress bar
             
@@ -456,7 +469,6 @@ Dim gitConfigfileContent As String
 GetProjectsDevFolder = userFolder
 
 
-
 'fetch repository from
 Set WshShell = CreateObject("WScript.Shell")
 ShellRun "Git.exe config --list", gitConfigfileContent, WshShell.ExpandEnvironmentStrings("%userprofile%")
@@ -470,21 +482,55 @@ Set WshShell = Nothing
     If UBound(lines) > 1 Then
     For Each line In lines
         line = Trim(LCase(line))
-        DebugLine "[GetProjectsDevFolder] repo file line: " & line
+        'DebugLine "[GetProjectsDevFolder] repo file line: " & line
         If InStr(line, "recentrepo") > 0 And Right(line, Len(MODULE_NAME)) = LCase(MODULE_NAME) Then
                 GetProjectsDevFolder = Mid(line, 16, Len(line) - (Len(MODULE_NAME) + 15))
                 GetProjectsDevFolder = Replace(GetProjectsDevFolder, "/", "\")
-                LogItem "[GetProjectsDevFolder] path dev found " & GetProjectsDevFolder
+                'DebugLine "[GetProjectsDevFolder] path dev found " & GetProjectsDevFolder
                 Exit For
             End If
     Next line
 
     Else
-        DebugLine "[GetProjectsDevFolder] can't find any repository in git config "
+        'DebugLine "[GetProjectsDevFolder] can't find any repository in git config "
     End If
 
 
+End Function
+Private Function ShellRun(ByVal sCmd As String, ByRef sOutput As String, Optional ByVal sExecutionFolder As String)
+
+    'Run a shell command, returning the output as a string
+
+    Dim oShell As Object
+    Set oShell = CreateObject("WScript.Shell")
+
+    'run command
+    Dim oExec As Object
+    Dim oOutput, oErrors As Object
+    
+    If Len(sExecutionFolder) > 0 Then oShell.CurrentDirectory = sExecutionFolder
+    
+    Set oExec = oShell.Exec(sCmd)
+    ShellRun = oExec.ExitCode
+    
+    Set oOutput = oExec.StdOut
+    Set oErrors = oExec.StdErr
+    'DebugLine "[ShellRun] exit code: (" & ShellRun & ") for command: " & sCmd
+    'handle the results as they are written to and read from the StdOut object
+    Dim s As String
+    Dim sLine As String
+    While Not oOutput.AtEndOfStream
+        sLine = oOutput.ReadLine
+        'DebugLine "[ShellRun] " & sLine
+        If sLine <> "" Then s = s & sLine & vbCrLf
+    Wend
+
+    While Not oErrors.AtEndOfStream
+        sLine = oErrors.ReadLine
+        'DebugLine "[ShellRun] " & sLine
+        If sLine <> "" Then s = s & sLine & vbCrLf
+    Wend
+    sOutput = s
 
 End Function
-
 

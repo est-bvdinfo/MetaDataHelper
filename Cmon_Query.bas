@@ -84,4 +84,39 @@ Public Function RegRead(Key As String) As String
     If Err Then Err.Clear
     On Error GoTo 0
 End Function
+Public Function ShellRun(ByVal sCmd As String, ByRef sOutput As String, Optional ByVal sExecutionFolder As String)
 
+    'Run a shell command, returning the output as a string
+
+    Dim oShell As Object
+    Set oShell = CreateObject("WScript.Shell")
+
+    'run command
+    Dim oExec As Object
+    Dim oOutput, oErrors As Object
+    
+    If Len(sExecutionFolder) > 0 Then oShell.CurrentDirectory = sExecutionFolder
+    
+    Set oExec = oShell.Exec(sCmd)
+    ShellRun = oExec.ExitCode
+    
+    Set oOutput = oExec.StdOut
+    Set oErrors = oExec.StdErr
+    DebugLine "[ShellRun] exit code: (" & ShellRun & ") for command: " & sCmd
+    'handle the results as they are written to and read from the StdOut object
+    Dim s As String
+    Dim sLine As String
+    While Not oOutput.AtEndOfStream
+        sLine = oOutput.ReadLine
+        DebugLine "[ShellRun] " & sLine
+        If sLine <> "" Then s = s & sLine & vbCrLf
+    Wend
+
+    While Not oErrors.AtEndOfStream
+        sLine = oErrors.ReadLine
+        DebugLine "[ShellRun] " & sLine
+        If sLine <> "" Then s = s & sLine & vbCrLf
+    Wend
+    sOutput = s
+
+End Function

@@ -84,14 +84,16 @@ Private Sub ExportModules(sourceFolderToBeDisplayed As Boolean)
 End Sub
 
 
-Private Sub ImportModules(wkbTarget As Excel.Workbook, targetSourceFolder As String)
+Private Sub ImportModules()
     Dim objFSO As FileSystemObject
     Dim objFile As Scripting.File
     Dim i%, sName$
     Dim listOfModules As Dictionary
     Dim moduleName, cmpComponents
 
-
+     Dim wkbTarget As Excel.Workbook: Set wkbTarget = Application.Workbooks(ActiveWorkbook.Name)
+     Dim targetSourceFolder As String:  targetSourceFolder = Settings.CurrentProjectFolder
+     
     'load all the code modules in a collection
     Set listOfModules = New Dictionary
     For Each objFile In objFSO.GetFolder(targetSourceFolder).Files
@@ -146,19 +148,18 @@ End If
 End Sub
 Public Sub UpdateInstaller()
  Dim http
-  Dim wkbTarget As Excel.Workbook
  Dim oZip, zipFullPath
  Dim zipFileName, downloadLink As String
-
-
  Dim oFolderItem, subFolder, objFolder
  Dim Status As updateStatuses
  Dim rootSourceFolder, targetSourceFolder As String
  
  'instanciate settings
  If Settings Is Nothing Then Set Settings = New CmonSettings
+ rootSourceFolder = fsoCreateFolder("Updates", Settings.UserSystemFolder)
+ targetSourceFolder = Settings.CurrentProjectFolder
  
- Set wkbTarget = Application.Workbooks(ActiveWorkbook.Name)
+ Dim wkbTarget As Excel.Workbook: Set wkbTarget = Application.Workbooks(ActiveWorkbook.Name)
  
  'check if the workbook is protected otherwise not possible to update
  If wkbTarget.VBProject.Protection = 1 Then MsgBox "The VBA in this workbook is protected," & vbCrLf & "not possible to Import the code": Exit Sub
@@ -186,8 +187,7 @@ Public Sub UpdateInstaller()
 
  downloadLink = REPOSITORY & "archive/master.zip"
  zipFileName = "Update" & ToUpGradeVersion & ".zip"
- rootSourceFolder = fsoCreateFolder("Updates", Settings.UserSystemFolder)
- targetSourceFolder = Settings.CurrentProjectFolder
+
 
   Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
   Dim fso As FileSystemObject: Set fso = CreateObject("Scripting.FileSystemObject")
@@ -261,7 +261,7 @@ Public Sub UpdateInstaller()
               objFolder.CopyHere subFolder.Items, 4
               
               'transfer all the copied files into xlsm
-               Call ImportModules(wkbTarget, targetSourceFolder)
+               Application.OnTime Now + TimeValue("00:00:01"), "ImportModules"
 
               'need to keep this exit for otherwise all the files in the zip
               'will be copied over and over

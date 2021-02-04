@@ -1,4 +1,8 @@
 Attribute VB_Name = "Cmon_Excel"
+Option Explicit
+
+Public Settings As CmonSettings
+
 Public Function ReadCustomProperties(strPropertyName As String, valueIfEmpty As Variant, _
                                     docType As Office.MsoDocProperties) As Variant
 

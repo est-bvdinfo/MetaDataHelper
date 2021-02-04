@@ -2,6 +2,8 @@ Attribute VB_Name = "Cmon_DOM"
 Option Explicit
 
 
+
+
 'Public Function GetNodeValue(ByRef sourceNode As IXMLDOMNode, elementName As String) As String
 
 ''Dim childNode As IXMLDOMNode
@@ -37,32 +39,7 @@ End If
 Set xmlDoc = Nothing
  IsXMLValid = ret
 End Function
-Public Function ReadCustomProperties(strPropertyName As String, valueIfEmpty As Variant, _
-                                    docType As Office.MsoDocProperties) As Variant
 
-    ReadCustomProperties = valueIfEmpty
-    On Error Resume Next
-    ReadCustomProperties = ActiveWorkbook.CustomDocumentProperties(strPropertyName).Value
-    If Err.Number > 0 Then
-        UpdateCustomProperties strPropertyName, valueIfEmpty, msoPropertyTypeDate
-    End If
-End Function
-Public Function UpdateCustomProperties(strPropertyName As String, _
-    Value As Variant, docType As Office.MsoDocProperties) As Variant
-
-    Dim oCustomProperty As DocumentProperty
-    On Error Resume Next
-    Set oCustomProperty = ActiveWorkbook.CustomDocumentProperties(strPropertyName)
-    If oCustomProperty Is Nothing Then
-        ActiveWorkbook.CustomDocumentProperties.Add _
-            Name:=strPropertyName, _
-            LinkToContent:=False, _
-            Type:=docType, _
-            Value:=Value
-    Else
-        oCustomProperty.Value = Value
-    End If
-End Function
 Public Function fsoCreateFolder(ByVal fol, ByVal ParentFol) As String
 Dim fsfol
 Set fsfol = CreateObject("Scripting.FileSystemObject")

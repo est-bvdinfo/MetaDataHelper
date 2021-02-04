@@ -124,12 +124,12 @@ Private Sub ImportModules()
      Next
         
        'remove oldsource installer
+       MsgBox listOfModules.Count & "Modules imported from" & targetSourceFolder, , "import"
+       'remove oldsource installer
        
        objProject.VBComponents.Remove objProject.VBComponents(SOURCE_CONTROLER & "0")
        objProject.VBComponents.Remove objProject.VBComponents(SOURCE_CONSTANTS & "0")
-        
-        '
-     MsgBox UBound(listOfModules) & "Modules imported from" & targetSourceFolder, , "import"
+    
    
    Set objFSO = Nothing
    Set objFile = Nothing
@@ -242,7 +242,7 @@ Public Sub UpdateInstaller()
                     ' Extract this component name
                     sName$ = .VBComponents(i%).CodeModule.Name
                     ' Do not change the source of this module which is currently running
-                    If (LCase(sName$) <> LCase(SOURCE_CONTROLER) Or LCase(sName$) <> LCase(SOURCE_CONSTANTS)) And (.VBComponents(i%).Type = vbext_ct_ClassModule Or _
+                    If LCase(sName$) <> LCase(SOURCE_CONTROLER) And LCase(sName$) <> LCase(SOURCE_CONSTANTS) And (.VBComponents(i%).Type = vbext_ct_ClassModule Or _
                         .VBComponents(i%).Type = vbext_ct_MSForm Or .VBComponents(i%).Type = vbext_ct_StdModule) Then
                         ' Standard Module
                          .VBComponents.Remove .VBComponents(i%)

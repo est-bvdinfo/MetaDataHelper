@@ -7,22 +7,21 @@ Public Enum updateStatuses
     ToUpdate
     GitHubNotReached
 End Enum
-Public Const MODULE_NAME = "MetaDataHelper"
-Public Const MODULE_BUILD = "1"
-Public Const MODULE_AUDIENCE = "BvdInternalTool"
-Public Const SOURCE_CONTROLER = "Cmon_SourceControl"
-Public Const REPOSITORY = "https://github.com/est-bvdinfo/MetaDataHelper/"
 Private targetSourceFolder As String
 
 
 Private Sub ExportModules(sourceFolderToBeDisplayed As Boolean)
     Dim bExport As Boolean
-    Dim wkbSource As Excel.Workbook
     Dim szSourceWorkbook As String
     Dim szExportPath As String
     Dim szFileName As String
+    Dim VBAEditor As VBIDE.VBE
+    Dim objProject As VBIDE.VBProject
     Dim cmpComponent As VBIDE.VBComponent   'Microsoft Visual Basic for Applications Extensibility 5.3 library
-
+    
+    Set VBAEditor = Application.VBE
+    Set objProject = VBAEditor.ActiveVBProject
+    
     ''' The code modules will be exported in a folder named.
     ''' VBAProjectFiles in the Documents folder.
     ''' The code below create this folder if it not exist
@@ -38,20 +37,16 @@ Private Sub ExportModules(sourceFolderToBeDisplayed As Boolean)
         Kill Settings.CurrentProjectFolder & "*.bas"
         Kill Settings.CurrentProjectFolder & "*.frx"
         
-
-    ''' NOTE: This workbook must be open in Excel.
-    szSourceWorkbook = ActiveWorkbook.Name
-    Set wkbSource = Application.Workbooks(szSourceWorkbook)
     
-    If wkbSource.VBProject.Protection = 1 Then
-    MsgBox "The VBA in this workbook is protected," & _
+    If objProject.Protection = 1 Then
+        MsgBox "The VBA in this workbook is protected," & _
         "not possible to export the code"
-    Exit Sub
+        Exit Sub
     End If
     
     szExportPath = Settings.CurrentProjectFolder
     
-    For Each cmpComponent In wkbSource.VBProject.VBComponents
+    For Each cmpComponent In objProject.VBComponents
         
         bExport = True
         szFileName = cmpComponent.Name
@@ -97,10 +92,13 @@ Private Sub ImportModules()
     Dim i%, sName$
     Dim listOfModules As Dictionary
     Dim moduleName, cmpComponents
+    Dim VBAEditor As VBIDE.VBE
+    Dim objProject As VBIDE.VBProject
+
+    Set VBAEditor = Application.VBE
+    Set objProject = VBAEditor.ActiveVBProject
  
-'need to replicate many existing objects as the module is meant to work standalone
-     Dim wkbTarget As Excel.Workbook: Set wkbTarget = Application.Workbooks(ActiveWorkbook.Name)
-     
+    'need to replicate many existing objects as the module is meant to work standalone
      Dim WshShell As Object: Set WshShell = CreateObject("WScript.Shell")
       
      targetSourceFolder = WshShell.ExpandEnvironmentStrings("%APPDATA%") & "\" & MODULE_AUDIENCE
@@ -122,11 +120,16 @@ Private Sub ImportModules()
    
      'all the existing files have been replaced. Now add the new ones
      For Each moduleName In listOfModules.Keys()
-        wkbTarget.VBProject.VBComponents.Import filename:=listOfModules(moduleName)
+        objProject.VBComponents.Import filename:=listOfModules(moduleName)
      Next
         
-
-    MsgBox "Modules imported from" & targetSourceFolder, , "import"
+       'remove oldsource installer
+       
+       objProject.VBComponents.Remove objProject.VBComponents(SOURCE_CONTROLER & "0")
+       objProject.VBComponents.Remove objProject.VBComponents(SOURCE_CONSTANTS & "0")
+        
+        '
+     MsgBox UBound(listOfModules) & "Modules imported from" & targetSourceFolder, , "import"
    
    Set objFSO = Nothing
    Set objFile = Nothing
@@ -134,29 +137,7 @@ Private Sub ImportModules()
    
 End Sub
 
-Public Sub AutomatedUpdateCheck()
-Dim lastUpdateCheck
-Dim lastUpdateTime
 
-If UpdatesHasBeenChecked = True Then
- DebugLine "[UpdateChecker] Already been Checked"
- Exit Sub
-End If
-  
-  'Check if the BVDSettings contains the LastUpdateCheck node
-   lastUpdateCheck = ReadCustomProperties("LastUpdateCheck", Now, msoPropertyTypeDate)
-   lastUpdateTime = CDate(lastUpdateCheck)
-   'handle conversion error and refill the LastUpdateObject
-         If DateDiff("d", lastUpdateTime, Now) >= 5 Then
-             Call UpdateInstaller
-         Else
-            LogItem "[UpdateChecker] less than 5 days between two checks"
-         End If
-
-    
-     UpdatesHasBeenChecked = True
-
-End Sub
 Public Sub UpdateInstaller()
  Dim http
  Dim oZip, zipFullPath
@@ -164,16 +145,19 @@ Public Sub UpdateInstaller()
  Dim oFolderItem, subFolder, objFolder
  Dim Status As updateStatuses
  Dim rootSourceFolder As String
+ Dim VBAEditor As VBIDE.VBE
+ Dim objProject As VBIDE.VBProject
+
+ Set VBAEditor = Application.VBE
+ Set objProject = VBAEditor.ActiveVBProject
  
  'instanciate settings
  If Settings Is Nothing Then Set Settings = New CmonSettings
  rootSourceFolder = fsoCreateFolder("Updates", Settings.UserSystemFolder)
  targetSourceFolder = Settings.CurrentProjectFolder
  
- Dim wkbTarget As Excel.Workbook: Set wkbTarget = Application.Workbooks(ActiveWorkbook.Name)
- 
  'check if the workbook is protected otherwise not possible to update
- If wkbTarget.VBProject.Protection = 1 Then MsgBox "The VBA in this workbook is protected," & vbCrLf & "not possible to Import the code": Exit Sub
+ If objProject.Protection = 1 Then MsgBox "The VBA in this workbook is protected," & vbCrLf & "not possible to Import the code": Exit Sub
  
  'check if update is required
  Status = CheckNewChangeset
@@ -198,10 +182,9 @@ Public Sub UpdateInstaller()
 
  downloadLink = REPOSITORY & "archive/master.zip"
  zipFileName = "Update" & ToUpGradeVersion & ".zip"
-
-
-  Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
-  Dim fso As FileSystemObject: Set fso = CreateObject("Scripting.FileSystemObject")
+  
+ Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
+ Dim fso As FileSystemObject: Set fso = CreateObject("Scripting.FileSystemObject")
   
   http.Open "GET", downloadLink, False
   http.send
@@ -244,8 +227,7 @@ Public Sub UpdateInstaller()
             'check that there are files to be imported
             Dim objFSO As New FileSystemObject
             If objFSO.GetFolder(targetSourceFolder).Files.Count = 0 Then MsgBox "There are no files to import": Exit Sub
-     
-
+    
             'copy zip files to SysFol without progress bar
             
             MsgBox "You are about to be prompted to allow a bulk files copy" _
@@ -254,30 +236,34 @@ Public Sub UpdateInstaller()
             
             'remove existing modules
              Dim i%, sName$
-              With wkbTarget.VBProject
+              With objProject
                 '2.1 remove all the code except sourcecontroler
                 For i% = .VBComponents.Count To 1 Step -1
                     ' Extract this component name
                     sName$ = .VBComponents(i%).CodeModule.Name
                     ' Do not change the source of this module which is currently running
-                    If LCase(sName$) <> LCase(SOURCE_CONTROLER) And (.VBComponents(i%).Type = vbext_ct_ClassModule Or _
+                    If (LCase(sName$) <> LCase(SOURCE_CONTROLER) Or LCase(sName$) <> LCase(SOURCE_CONSTANTS)) And (.VBComponents(i%).Type = vbext_ct_ClassModule Or _
                         .VBComponents(i%).Type = vbext_ct_MSForm Or .VBComponents(i%).Type = vbext_ct_StdModule) Then
                         ' Standard Module
                          .VBComponents.Remove .VBComponents(i%)
                     End If
                 Next i
+                              
+              'versioning of source installer
+                    .VBComponents(SOURCE_CONTROLER).Name = SOURCE_CONTROLER & "0"
+                    .VBComponents(SOURCE_CONSTANTS).Name = SOURCE_CONSTANTS & "0"
               
                End With
                
                'copy files in the right folder
               LogItem "[UpdateDownloadAndExtract] upgrade to version:" & ToUpGradeVersion & " as soon as the user allows it"
               objFolder.CopyHere subFolder.Items, 4
-              
+
               'transfer all the copied files into xlsm
                Application.OnTime Now + TimeValue("00:00:01"), "ImportModules"
 
               'need to keep this exit for otherwise all the files in the zip
-              'will be copied over and over
+
               Exit For
         End If
     Next
@@ -533,4 +519,8 @@ Private Function ShellRun(ByVal sCmd As String, ByRef sOutput As String, Optiona
     sOutput = s
 
 End Function
+
+
+
+
 

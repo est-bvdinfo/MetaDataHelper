@@ -17,10 +17,10 @@ Private m_sSectionPath As String
 Private m_cDimensions As Collection
 Private m_bIsInitiated As Boolean
 Private m_bIsLargeText As Boolean
-Public Function InitiateObject(parsedMetadata As Dictionary, depth As Integer, parentSectionPath As String)
+Public Function InitiateObject(parsedMetadata As Dictionary, Depth As Integer, parentSectionPath As String)
 Dim vKey As Variant
 
-m_iDepth = depth + 1
+m_iDepth = Depth + 1
 m_sSectionPath = parentSectionPath
 'init new collection
 Set m_cDimensions = New Collection
@@ -44,6 +44,9 @@ For Each vKey In parsedMetadata.Keys
      Case "RequestType":
         m_sRequestType = parsedMetadata(vKey)
 
+     Case "Description":
+        m_sDescription = parsedMetadata(vKey)
+        
      Case "Dimensions":
         
         ' parse each subsection
@@ -54,7 +57,14 @@ For Each vKey In parsedMetadata.Keys
                     cDimension.InitiateObject oDimension, m_iDepth
                     
                     'add to current object
-                    If cDimension.IsInitiated Then m_cDimensions.Add cDimension
+                    If cDimension.IsInitiated Then
+                        m_cDimensions.Add cDimension
+                        'add to a list of dimensionstype for later printing
+                        If Not DimensionDic.Exists(cDimension.DimType) Then
+                            DimensionDic.Add cDimension.DimType, DimensionDic.Count + 1
+                        End If
+                        
+                    End If
              
             Next
      
@@ -75,17 +85,27 @@ m_bIsInitiated = True
 End Function
 Public Sub PrintLine(thisSheet As Worksheet, row As Integer)
 
-thisSheet.Cells(row, 1).Value = m_iDepth
-thisSheet.Cells(row, 2).Value = m_sSectionPath
-With thisSheet.Cells(row, 3)
+thisSheet.Cells(row, ColumnSelect.Level).Value = m_iDepth - 2
+thisSheet.Cells(row, ColumnSelect.Path).Value = m_sSectionPath
+With thisSheet.Cells(row, ColumnSelect.FieldCode)
     .Value = m_sFieldId
     .Font.FontStyle = "Bold"
 End With
 
-thisSheet.Cells(row, 4).Value = m_sLabel
-thisSheet.Cells(row, 5).Value = m_sModelId
-thisSheet.Cells(row, 6).Value = m_sRequestType
-thisSheet.Cells(row, 8).Value = LargeText
+thisSheet.Cells(row, ColumnSelect.LabelEN).Value = m_sLabel
+thisSheet.Cells(row, ColumnSelect.Model).Value = m_sModelId
+thisSheet.Cells(row, ColumnSelect.DataType).Value = m_sRequestType
+thisSheet.Cells(row, ColumnSelect.Description).Value = m_sDescription
+thisSheet.Cells(row, ColumnSelect.FieldLenght).Value = IIf(LargeText, "LargeText", "")
+
+'print dimensions
+Dim cDimension As FieldDimension
+For Each cDimension In m_cDimensions
+    If (DimensionDic.Exists(cDimension.DimType)) Then
+       thisSheet.Cells(row, ColumnSelect.FieldLenght + CInt(DimensionDic(cDimension.DimType))).Value = cDimension.Name
+    End If
+Next cDimension
+
     
 End Sub
 
@@ -108,8 +128,8 @@ End Property
 Public Property Get Dimensions() As Collection
   Set Dimensions = m_cDimensions
 End Property
-Public Property Get depth() As Integer
- depth = m_iDepth
+Public Property Get Depth() As Integer
+ Depth = m_iDepth
 End Property
 Public Property Get IsLargeText() As Boolean: IsLargeText = m_bIsLargeText: End Property
         

@@ -76,10 +76,10 @@ Function HttpPOSTXto(url As String, ByVal arguments)
 End Function
 
 'VBA function to READ from the Windows Registry:
-Public Function RegRead(Key As String) As String
+Public Function RegRead(key As String) As String
     On Error Resume Next
     With CreateObject("wscript.shell")
-        RegRead = .RegRead(Key)
+        RegRead = .RegRead(key)
     End With
     If Err Then Err.Clear
     On Error GoTo 0

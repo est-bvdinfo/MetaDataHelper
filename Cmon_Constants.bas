@@ -3,7 +3,7 @@ Option Explicit
 Public Const MODULE_NAME = "MetaDataHelper"
 Public Const MODULE_BUILD = "1"
 Public Const MODULE_AUDIENCE = "BvdInternalTool"
-Public Const MODULE_VERSION = "0.2.6"
+Public Const MODULE_VERSION = "0.3.2"
 Public Const MODULE_OWNER = "est_bvdinfo"
 
 Public Const SOURCE_CONTROLER = "Cmon_SourceControl"

@@ -15,10 +15,10 @@ Private m_cSubSections As Collection
 Private m_sSectionPath As String
 Private m_cFields As Collection
 Private m_bIsInitiated As Boolean
-Public Function InitiateCollections(parsedMetadata As Dictionary, depth As Integer, parentSectionPath As String)
+Public Function InitiateCollections(parsedMetadata As Dictionary, Depth As Integer, parentSectionPath As String)
 Dim vKey As Variant
 
-m_iDepth = depth + 1
+m_iDepth = Depth + 1
 m_sSectionPath = parentSectionPath & "\" & parsedMetadata("Name")
 'init new collectionz
 Set m_cFields = New Collection
@@ -74,7 +74,7 @@ m_bIsInitiated = True
 End Function
 Public Sub PrintSection(currentSheet As Worksheet, currentRow As Integer)
 
-currentSheet.Cells(currentRow, 1).Value = m_iDepth
+currentSheet.Cells(currentRow, 1).Value = m_iDepth - 2
 
     With currentSheet.Cells(currentRow, 2)
         .Value = m_sSectionPath
@@ -94,8 +94,8 @@ Set Fields = m_cFields
 
 End Property
 
-Public Property Get depth() As Integer
- depth = m_iDepth
+Public Property Get Depth() As Integer
+ Depth = m_iDepth
 
 End Property
 Public Property Get SectionPath() As String

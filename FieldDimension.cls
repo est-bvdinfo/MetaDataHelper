@@ -13,10 +13,10 @@ Private m_iDepth As Integer
 Private m_bIsInitiated As Boolean
 
 
-Public Function InitiateObject(parsedMetadata As Dictionary, depth As Integer)
+Public Function InitiateObject(parsedMetadata As Dictionary, Depth As Integer)
 Dim vKey As Variant
 
-m_iDepth = depth + 1
+m_iDepth = Depth + 1
 'init new collection
 
 For Each vKey In parsedMetadata.Keys
@@ -44,7 +44,7 @@ End Function
 
 
 Public Property Get IsInitiated() As Boolean: IsInitiated = m_bIsInitiated: End Property
-Public Property Get DimName() As Collection
+Public Property Get Name() As String
  Name = m_sName
 
 End Property
@@ -53,8 +53,8 @@ Public Property Get DimType() As String
  DimType = m_sType
 
 End Property
-Public Property Get depth() As Integer
- depth = m_iDepth
+Public Property Get Depth() As Integer
+ Depth = m_iDepth
 
 End Property
     

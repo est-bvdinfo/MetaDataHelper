@@ -12,12 +12,14 @@ Option Explicit
 Private m_sName As String
 Private m_iDepth As Integer
 Private m_cSubSections As Collection
+Private m_sSectionPath As String
 Private m_cFields As Collection
 Private m_bIsInitiated As Boolean
-Public Function InitiateCollections(parsedMetadata As Dictionary, depth As Integer)
+Public Function InitiateCollections(parsedMetadata As Dictionary, depth As Integer, parentSectionPath As String)
 Dim vKey As Variant
 
 m_iDepth = depth + 1
+m_sSectionPath = parentSectionPath & "\" & parsedMetadata("Name")
 'init new collectionz
 Set m_cFields = New Collection
 Set m_cSubSections = New Collection
@@ -36,7 +38,7 @@ For Each vKey In parsedMetadata.Keys
         Dim faField As FieldAttributes
         For Each oField In parsedMetadata(vKey)
                 Set faField = New FieldAttributes
-                faField.InitiateObject oField, m_iDepth
+                faField.InitiateObject oField, m_iDepth, m_sSectionPath
                     
                 'add to current object
                 If faField.IsInitiated Then m_cFields.Add faField
@@ -50,7 +52,7 @@ For Each vKey In parsedMetadata.Keys
         Dim scSections As SectionCollection
         For Each oSection In parsedMetadata(vKey)
                 Set scSections = New SectionCollection
-                    scSections.InitiateCollections oSection, m_iDepth
+                    scSections.InitiateCollections oSection, m_iDepth, m_sSectionPath
                     
                     'add to current object
                     If scSections.IsInitiated Then m_cSubSections.Add scSections
@@ -70,7 +72,17 @@ m_bIsInitiated = True
 
 
 End Function
+Public Sub PrintSection(currentSheet As Worksheet, currentRow As Integer)
 
+currentSheet.Cells(currentRow, 1).Value = m_iDepth
+
+    With currentSheet.Cells(currentRow, 2)
+        .Value = m_sSectionPath
+        .Font.FontStyle = "Italic"
+        .Font.Underline = xlUnderlineStyleSingle
+        .Font.Size = 13
+    End With
+End Sub
 Public Property Get IsInitiated() As Boolean: IsInitiated = m_bIsInitiated: End Property
 Public Property Get SubSections() As Collection
 Set SubSections = m_cSubSections
@@ -85,6 +97,9 @@ End Property
 Public Property Get depth() As Integer
  depth = m_iDepth
 
+End Property
+Public Property Get SectionPath() As String
+    SectionPath = m_sSectionPath
 End Property
 
 Public Property Get Name() As String

@@ -13,13 +13,15 @@ Private m_sModelId As String
 Private m_iDepth As Integer
 Private m_sRequestType As String
 Private m_sDescription As String
+Private m_sSectionPath As String
 Private m_cDimensions As Collection
 Private m_bIsInitiated As Boolean
 Private m_bIsLargeText As Boolean
-Public Function InitiateObject(parsedMetadata As Dictionary, depth As Integer)
+Public Function InitiateObject(parsedMetadata As Dictionary, depth As Integer, parentSectionPath As String)
 Dim vKey As Variant
 
 m_iDepth = depth + 1
+m_sSectionPath = parentSectionPath
 'init new collection
 Set m_cDimensions = New Collection
 
@@ -73,18 +75,29 @@ m_bIsInitiated = True
 End Function
 Public Sub PrintLine(thisSheet As Worksheet, row As Integer)
 
+thisSheet.Cells(row, 1).Value = m_iDepth
+thisSheet.Cells(row, 2).Value = m_sSectionPath
+With thisSheet.Cells(row, 3)
+    .Value = m_sFieldId
+    .Font.FontStyle = "Bold"
+End With
 
+thisSheet.Cells(row, 4).Value = m_sLabel
+thisSheet.Cells(row, 5).Value = m_sModelId
+thisSheet.Cells(row, 6).Value = m_sRequestType
+thisSheet.Cells(row, 8).Value = LargeText
+    
 End Sub
 
 
 Public Property Get IsInitiated() As Boolean: IsInitiated = m_bIsInitiated: End Property
 
 Public Property Get Label() As String: Label = m_sLabel: End Property
-Public Property Get FieldId() As String
-    FieldId = m_sFieldId
+Public Property Get fieldId() As String
+    fieldId = m_sFieldId
 End Property
-Public Property Get ModelId() As String
-    ModelId = m_sModelId
+Public Property Get modelId() As String
+    modelId = m_sModelId
 End Property
 Public Property Get RequestType() As String
     RequestType = m_sRequestType

@@ -5,7 +5,7 @@ Public SelectPayload As String
 Public WherePayload As String
 Public Enum ColumnSelect
         fieldName = 1
-        fieldCode = 2
+        FieldCode = 2
         
 End Enum
 
@@ -33,7 +33,7 @@ Set parsedMetadata = ParseJson(SelectPayload)
 
 Set Sections = New SectionCollection
 
-Sections.InitiateCollections parsedMetadata, 0
+Sections.InitiateCollections parsedMetadata, -2, ""
 
 LogItem "Select Medata Loaded, preparing to render in Excel"
 
@@ -41,34 +41,53 @@ LogItem "Select Medata Loaded, preparing to render in Excel"
 ' delete all sheets
     DeleteSheets
     
-Dim scSection As SectionCollection
-
-For Each scSection In Sections.SubSections
+Dim topSection As SectionCollection
+Dim counter As Integer
+For Each topSection In Sections.SubSections
     
    Set currentSheet = Sheets.Add(After:=ActiveSheet)
 
-   currentSheet.Name = IIf(Len(scSection.Name) >= 30, Left(scSection.Name, 30), scSection.Name)
-
-    'add header
+   currentSheet.Name = IIf(Len(topSection.Name) >= 30, Left(topSection.Name, 30), topSection.Name)
+    'start fields and section creations
+    parseSection topSection, currentSheet, 2
     
-    
-    'add fields
-    
-
+    counter = counter + 1
+    If counter > 2 Then Exit For
 Next
-
 
 
 End Sub
 
+Private Sub parseSection(topSection As SectionCollection, currentSheet As Worksheet, currentRow As Integer)
 
+Dim subSection As SectionCollection
+Dim cFields As FieldAttributes
+
+'check if there are fields to display title
+    If topSection.Fields.Count > 0 Then topSection.PrintSection currentSheet, currentRow
+        
+    'get the fields from top section
+    For Each cFields In topSection.Fields
+        currentRow = currentRow + 1
+        cFields.PrintLine currentSheet, currentRow
+    Next cFields
+
+    For Each subSection In topSection.SubSections
+    
+        currentRow = currentRow + 1
+        parseSection subSection, currentSheet, currentRow
+
+    Next subSection
+
+End Sub
 
 Private Sub DeleteSheets()
 
 Application.DisplayAlerts = False
-Dim ws
+
+Dim ws As Object
 For Each ws In ThisWorkbook.Worksheets
-    ws.Delete
+    If (ThisWorkbook.Worksheets.Count > 1) Then ws.Delete
 Next
 Application.DisplayAlerts = True
 

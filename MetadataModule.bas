@@ -15,10 +15,6 @@ Public Enum ColumnSelect
         FieldLenght = 8 ' beware use for dynamic dimensions
 End Enum
 
-
-
-
-
 Public Sub GetMetadataSelect()
 
 
@@ -33,10 +29,11 @@ If Len(Settings.ServiceURL) < 7 Then Exit Sub
 
 'Fetch metadata select from REST API if not in cache
 If Len(SelectPayload) < 10 Then
-    URLget = Settings.ServiceURL & "Metadata/select"
-    SelectPayload = HttpGET(URLget)
+    URLget = Settings.ServiceURL & "Metadata/data/select"
+    DebugLine URLget
+    SelectPayload = HttpGETRest(URLget)
 End If
-
+'?Language=RU"
 'Convert JSON into object
 Set parsedMetadata = ParseJson(SelectPayload)
 
@@ -52,7 +49,6 @@ LogItem "Select Medata Loaded, preparing to render in Excel"
     DeleteSheets
     
 Dim topSection As SectionCollection
-Dim counter As Integer
 Dim key As Variant
 
 For Each topSection In Sections.SubSections
@@ -65,12 +61,16 @@ For Each topSection In Sections.SubSections
         .Cells(1, ColumnSelect.Description).Value = "Description"
         .Cells(1, ColumnSelect.FieldCode).Value = "FieldCode"
         .Cells(1, ColumnSelect.FieldLenght).Value = "Lenght"
-        .Cells(1, ColumnSelect.LabelEN).Value = "Label_EN"
+        .Cells(1, ColumnSelect.LabelEN).Value = "Label"
         .Cells(1, ColumnSelect.Level).Value = "Level"
         .Cells(1, ColumnSelect.Model).Value = "ModelID"
         .Cells(1, ColumnSelect.Path).Value = "Path"
+        Dim colName As String
         For Each key In DimensionDic.Keys
-            .Cells(1, ColumnSelect.FieldLenght + DimensionDic(key)).Value = key
+            If (InStr(key, "Limit") > 0) Then colName = "Repetition criteria"
+            If (InStr(key, "IndexOrYear") > 0) Then colName = "Period criteria"
+
+            .Cells(1, ColumnSelect.FieldLenght + DimensionDic(key)).Value = colName
         Next key
        .Rows("1:1").Font.Bold = True
 
@@ -81,9 +81,7 @@ For Each topSection In Sections.SubSections
     
     'autofit
     currentSheet.Columns("A:Q").AutoFit
-    
-    counter = counter + 1
-    If counter > 2 Then Exit For
+
 Next
 
 

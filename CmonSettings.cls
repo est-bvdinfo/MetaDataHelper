@@ -135,7 +135,7 @@ If fso.FileExists(m_usersysFolder & USERSETTINGS) Then
             MsgBox "database node is missing or not properly formated" & vbCrLf & "from " & m_usersysFolder & vbCrLf & "Please Correct!", 64, USERSETTINGS
         Else
                m_connectionString = "Driver={SQL Server}; Server=" & UCase(oDataBase.getAttribute("server")) & "; Database=" & LCase(oDataBase.getAttribute("database")) & "; UID=" & oDataBase.getAttribute("user") & "; PWD=" & oDataBase.getAttribute("password")
-               m_serviceURL = "Http://" & LCase(oDataBase.getAttribute("server")) & "/" & LCase(oDataBase.getAttribute("database")) & "/"
+               m_serviceURL = "Https://" & LCase(oDataBase.getAttribute("server")) & "/" & LCase(oDataBase.getAttribute("database")) & "/"
 
                
         End If

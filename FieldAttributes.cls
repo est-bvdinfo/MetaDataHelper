@@ -52,9 +52,11 @@ For Each vKey In parsedMetadata.Keys
         ' parse each subsection
         Dim oDimension As Object
         Dim cDimension As FieldDimension
+        Dim iDimPos As Integer
             For Each oDimension In parsedMetadata(vKey)
                     Set cDimension = New FieldDimension
-                    cDimension.InitiateObject oDimension, m_iDepth
+                    iDimPos = iDimPos + 1
+                    cDimension.InitiateObject oDimension, m_iDepth, iDimPos
                     
                     'add to current object
                     If cDimension.IsInitiated Then

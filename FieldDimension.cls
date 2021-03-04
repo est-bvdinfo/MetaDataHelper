@@ -13,7 +13,7 @@ Private m_iDepth As Integer
 Private m_bIsInitiated As Boolean
 
 
-Public Function InitiateObject(parsedMetadata As Dictionary, Depth As Integer)
+Public Function InitiateObject(parsedMetadata As Dictionary, Depth As Integer, dimOrder As Integer)
 Dim vKey As Variant
 
 m_iDepth = Depth + 1
@@ -27,7 +27,7 @@ For Each vKey In parsedMetadata.Keys
         m_sName = parsedMetadata(vKey)
         
      Case "Type":
-        m_sType = parsedMetadata(vKey)
+        m_sType = parsedMetadata(vKey) & "_" & CStr(dimOrder)
     
      Case Else
  

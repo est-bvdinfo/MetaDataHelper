@@ -98,7 +98,7 @@ thisSheet.Cells(row, ColumnSelect.LabelEN).Value = m_sLabel
 thisSheet.Cells(row, ColumnSelect.Model).Value = m_sModelId
 thisSheet.Cells(row, ColumnSelect.DataType).Value = m_sRequestType
 thisSheet.Cells(row, ColumnSelect.Description).Value = m_sDescription
-thisSheet.Cells(row, ColumnSelect.FieldLenght).Value = IIf(LargeText, "LargeText", "")
+thisSheet.Cells(row, ColumnSelect.FieldLenght).Value = IIf(m_bIsLargeText, "LargeText", "")
 
 'print dimensions
 Dim cDimension As FieldDimension

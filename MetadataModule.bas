@@ -15,6 +15,32 @@ Public Enum ColumnSelect
         FieldLenght = 8 ' beware use for dynamic dimensions
 End Enum
 
+Private Sub BuildSummaryPage()
+
+Dim ws As Worksheet
+Dim summaryWorksheet As Worksheet
+Dim x As Integer
+
+x = 2
+Set summaryWorksheet = Sheets("Summary")
+
+summaryWorksheet.Range("A:A").Clear
+  summaryWorksheet.Cells(1, 1).Value = "Sheet Name"
+    summaryWorksheet.Cells(1, 2).Value = "Item counts"
+
+For Each ws In Worksheets
+ If (ws.Name <> "Summary") Then
+     summaryWorksheet.Cells(x, 1).Select
+     summaryWorksheet.Hyperlinks.Add Anchor:=Selection, Address:="", SubAddress:= _
+        "'" & ws.Name & "'" & "!A1", TextToDisplay:=ws.Name
+     summaryWorksheet.Cells(x, 2) = ws.Cells(Rows.Count, 1).End(xlUp).row
+     x = x + 1
+End If
+Next ws
+
+End Sub
+
+
 Public Sub GetMetadataSelect()
 
 
@@ -84,6 +110,8 @@ For Each topSection In Sections.SubSections
 
 Next
 
+'build summary page
+BuildSummaryPage
 
 End Sub
 
@@ -116,7 +144,9 @@ Application.DisplayAlerts = False
 
 Dim ws As Object
 For Each ws In ThisWorkbook.Worksheets
-    If (ThisWorkbook.Worksheets.Count > 1) Then ws.Delete
+    If (ws.Name <> "Summary") Then ws.Delete
+    
+   
 Next
 Application.DisplayAlerts = True
 

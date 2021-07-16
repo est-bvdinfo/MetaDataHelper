@@ -145,7 +145,7 @@ Function ClipBoard_SetData(MyString As String)
 'SOURCE: www.msdn.microsoft.com/en-us/library/office/ff192913.aspx
 
 Dim hGlobalMemory As Long, lpGlobalMemory As Long
-Dim hClipMemory As Long, X As Long
+Dim hClipMemory As Long, x As Long
 
 'Allocate moveable global memory
   hGlobalMemory = GlobalAlloc(GHND, Len(MyString) + 1)
@@ -169,7 +169,7 @@ Dim hClipMemory As Long, X As Long
   End If
 
 'Clear the Clipboard.
-  X = EmptyClipboard()
+  x = EmptyClipboard()
 
 'Copy the data to the Clipboard.
   hClipMemory = SetClipboardData(CF_TEXT, hGlobalMemory)
